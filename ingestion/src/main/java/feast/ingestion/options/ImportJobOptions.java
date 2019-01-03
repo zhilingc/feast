@@ -18,7 +18,6 @@
 package feast.ingestion.options;
 
 import com.google.auto.service.AutoService;
-import java.util.Collections;
 import org.apache.beam.runners.flink.FlinkPipelineOptions;
 import org.apache.beam.sdk.extensions.gcp.options.GcpOptions;
 import org.apache.beam.sdk.metrics.MetricsSink;
@@ -27,6 +26,8 @@ import org.apache.beam.sdk.options.Description;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsRegistrar;
 import org.apache.beam.sdk.options.Validation.Required;
+
+import java.util.Collections;
 
 public interface ImportJobOptions extends PipelineOptions, FlinkPipelineOptions, GcpOptions {
   @Description("Import spec yaml file path")
@@ -74,11 +75,19 @@ public interface ImportJobOptions extends PipelineOptions, FlinkPipelineOptions,
   void setLimit(Long value);
 
   @Description(
-      "Set a store id to store errors in, if your data input is **very** small, you can use STDOUT"
-          + " or STDERR as the store id, otherwise it must match an associated storage spec")
-  String getErrorsStoreId();
+      "Set an errors store type. One of: [STDERR, STDOUT, JSON]. Note that you should not use " +
+              "STDERR/STDOUT in production unless your data volume is extremely small.")
+  String getErrorsStoreType();
 
   void setErrorsStoreId(String value);
+
+  @Description(
+      "Provide errors store options as a json string containing key-values. Options required" +
+              "depend on the type of store set."
+  )
+  String getErrorsStoreOptions();
+
+  void setErrorsStoreOptions(String value);
 
   @AutoService(PipelineOptionsRegistrar.class)
   class ImportJobOptionsRegistrar implements PipelineOptionsRegistrar {

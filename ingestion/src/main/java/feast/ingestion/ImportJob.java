@@ -113,11 +113,6 @@ public class ImportJob {
     if (options.getJobName().isEmpty()) {
       options.setJobName(generateName());
     }
-    try {
-      options.setGcpCredential(GoogleCredentials.getApplicationDefault().createScoped(DataflowScopes.all()));
-    } catch (IOException e) {
-      log.error("Exception while setting gcp credential manually : ", e.getMessage());
-    }
     log.info("options: " + options.toString());
     ImportSpec importSpec = new ImportSpecSupplier(options).get();
     Injector injector =

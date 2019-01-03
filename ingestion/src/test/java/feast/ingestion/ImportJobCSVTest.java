@@ -17,11 +17,6 @@
 
 package feast.ingestion;
 
-import static feast.FeastMatchers.hasCount;
-import static feast.ToOrderedFeatureRows.orderedFeatureRow;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
@@ -40,17 +35,11 @@ import feast.specs.ImportSpecProto.ImportSpec;
 import feast.storage.MockErrorsStore;
 import feast.storage.MockServingStore;
 import feast.storage.MockWarehouseStore;
-import feast.storage.service.ErrorsStoreService;
 import feast.storage.service.ServingStoreService;
 import feast.storage.service.WarehouseStoreService;
 import feast.types.FeatureRowExtendedProto.FeatureRowExtended;
 import feast.types.FeatureRowProto.FeatureRow;
 import feast.types.GranularityProto.Granularity;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.testing.PAssert;
@@ -58,10 +47,20 @@ import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+
+import static feast.FeastMatchers.hasCount;
+import static feast.ToOrderedFeatureRows.orderedFeatureRow;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 @Slf4j
 public class ImportJobCSVTest {
@@ -126,8 +125,9 @@ public class ImportJobCSVTest {
                 WarehouseStoreService.get(MockWarehouseStore.class).getWrite().getInputs())
             .apply("flatten warehouse input", Flatten.pCollections());
 
+    MockErrorsStore mockErrorStore = new MockErrorsStore();
     PCollection<FeatureRowExtended> writtenToErrors =
-        PCollectionList.of(ErrorsStoreService.get(MockErrorsStore.class).getWrite().getInputs())
+        PCollectionList.of(mockErrorStore.getWrite().getInputs())
             .apply("flatten errors input", Flatten.pCollections());
 
     List<FeatureRow> expectedRows =
@@ -258,8 +258,9 @@ public class ImportJobCSVTest {
         PCollectionList.of(ServingStoreService.get(MockServingStore.class).getWrite().getInputs())
             .apply("flatten serving input", Flatten.pCollections());
 
+    MockErrorsStore mockErrorStore = new MockErrorsStore();
     PCollection<FeatureRowExtended> writtenToErrors =
-        PCollectionList.of(ErrorsStoreService.get(MockErrorsStore.class).getWrite().getInputs())
+        PCollectionList.of(mockErrorStore.getWrite().getInputs())
             .apply("flatten errors input", Flatten.pCollections());
 
     PAssert.that(writtenToErrors)

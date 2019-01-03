@@ -28,14 +28,13 @@ import feast.ingestion.service.SpecService;
 import feast.ingestion.service.SpecService.Builder;
 import feast.ingestion.service.SpecService.UnsupportedBuilder;
 import feast.specs.ImportSpecProto.ImportSpec;
-import feast.storage.ErrorsStore;
 import feast.storage.ServingStore;
 import feast.storage.WarehouseStore;
-import feast.storage.service.ErrorsStoreService;
 import feast.storage.service.ServingStoreService;
 import feast.storage.service.WarehouseStoreService;
-import java.util.List;
 import org.apache.beam.sdk.options.PipelineOptions;
+
+import java.util.List;
 
 /** An ImportJobModule is a Guice module for creating dependency injection bindings. */
 public class ImportJobModule extends AbstractModule {
@@ -84,11 +83,5 @@ public class ImportJobModule extends AbstractModule {
   @Singleton
   List<ServingStore> provideServingStores() {
     return ServingStoreService.getAll();
-  }
-
-  @Provides
-  @Singleton
-  List<ErrorsStore> provideErrorsStores() {
-    return ErrorsStoreService.getAll();
   }
 }
