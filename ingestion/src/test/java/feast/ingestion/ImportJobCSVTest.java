@@ -113,6 +113,9 @@ public class ImportJobCSVTest {
         Guice.createInjector(
             new ImportJobModule(options, importSpec), new TestPipelineModule(testPipeline));
 
+    MockErrorsStore mockErrorStore = new MockErrorsStore();
+    ErrorsStoreService.register(mockErrorStore);
+
     ImportJob job = injector.getInstance(ImportJob.class);
     injector.getInstance(ImportJob.class);
     job.expand();
@@ -125,11 +128,10 @@ public class ImportJobCSVTest {
         PCollectionList.of(
                 WarehouseStoreService.get(MockWarehouseStore.class).getWrite().getInputs())
             .apply("flatten warehouse input", Flatten.pCollections());
-//
-//    MockErrorsStore mockErrorStore = new MockErrorsStore();
-//    PCollection<FeatureRowExtended> writtenToErrors =
-//        PCollectionList.of(mockErrorStore.getWrite().getInputs())
-//            .apply("flatten errors input", Flatten.pCollections());
+
+    PCollection<FeatureRowExtended> writtenToErrors =
+        PCollectionList.of(((MockErrorsStore) ErrorsStoreService.get()).getWrite().getInputs())
+            .apply("flatten errors input", Flatten.pCollections());
 
     List<FeatureRow> expectedRows =
         Lists.newArrayList(
@@ -161,7 +163,7 @@ public class ImportJobCSVTest {
                     .addFeatures(Features.of("testEntity.none.testString", Values.ofString("c")))
                     .build()));
 
-//    PAssert.that(writtenToErrors).satisfies(hasCount(0));
+    PAssert.that(writtenToErrors).satisfies(hasCount(0));
 
     PAssert.that(writtenToServing.apply("serving toFeatureRows", new ToOrderedFeatureRows()))
         .containsInAnyOrder(expectedRows);
@@ -189,7 +191,7 @@ public class ImportJobCSVTest {
                 + "  fields:\n"
                 + "    - name: id\n"
                 + "    - featureId: testEntity.none.redisInt32\n" // Redis is not available by
-                                                                  // default from the json specs
+                // default from the json specs
                 + "    - featureId: testEntity.none.testString\n"
                 + "\n",
             ImportSpec.getDefaultInstance());
@@ -251,10 +253,12 @@ public class ImportJobCSVTest {
         Guice.createInjector(
             new ImportJobModule(options, importSpec), new TestPipelineModule(testPipeline));
 
-    ImportJob job = injector.getInstance(ImportJob.class);
-    injector.getInstance(ImportJob.class);
     MockErrorsStore mockErrorStore = new MockErrorsStore();
     ErrorsStoreService.register(mockErrorStore);
+
+    ImportJob job = injector.getInstance(ImportJob.class);
+
+    injector.getInstance(ImportJob.class);
     job.expand();
 
     PCollection<FeatureRowExtended> writtenToServing =
@@ -270,7 +274,6 @@ public class ImportJobCSVTest {
             (errors) -> {
               int i = 0;
               for (FeatureRowExtended row : errors) {
-                log.error(row.toString());
                 assertEquals(
                     row.getLastAttempt().getError().getCause(),
                     "feast.ingestion.exceptions.TypeConversionException");

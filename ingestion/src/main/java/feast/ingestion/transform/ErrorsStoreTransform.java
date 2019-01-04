@@ -25,13 +25,14 @@ import feast.ingestion.transform.fn.LoggerDoFn;
 import feast.specs.StorageSpecProto.StorageSpec;
 import feast.storage.ErrorsStore;
 import feast.storage.noop.NoOpIO;
-import feast.storage.service.ErrorsStoreService;
 import feast.types.FeatureRowExtendedProto.FeatureRowExtended;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PDone;
 import org.slf4j.event.Level;
+
+import javax.annotation.Nullable;
 
 import static feast.ingestion.util.JsonUtil.convertJsonStringToMap;
 
@@ -47,11 +48,13 @@ public class ErrorsStoreTransform extends FeatureIO.Write {
   private Specs specs;
 
   @Inject
-  public ErrorsStoreTransform(ImportJobOptions options, Specs specs, ErrorsStore errorsStore) {
+  public ErrorsStoreTransform(
+      ImportJobOptions options, Specs specs, @Nullable ErrorsStore errorsStore) {
     this.specs = specs;
     this.errorsStoreType = options.getErrorsStoreType();
     this.errorsStore = errorsStore;
     StorageSpec.Builder errorsStoreBuilder = StorageSpec.newBuilder().setType(errorsStoreType);
+
     switch (errorsStoreType) {
       case ERRORS_STORE_JSON:
         errorsStoreBuilder.putAllOptions(convertJsonStringToMap(options.getErrorsStoreOptions()));
@@ -71,7 +74,7 @@ public class ErrorsStoreTransform extends FeatureIO.Write {
         break;
       default:
         if (errorsStore == null) {
-          log.warn("No valid errors store type specified, errors will be discarded");
+          log.warn("No valid errors store specified, errors will be discarded");
           return input.apply(new NoOpIO.Write());
         }
         Write write = errorsStore.create(this.errorsStoreSpec, specs);

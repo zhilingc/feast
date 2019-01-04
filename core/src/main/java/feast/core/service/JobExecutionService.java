@@ -41,11 +41,9 @@ import java.util.regex.Pattern;
 @Slf4j
 @Service
 public class JobExecutionService {
+  public static final String JOB_PREFIX_DEFAULT = "feastimport";
   private static final int SLEEP_MS = 10;
   private static final Pattern JOB_EXT_ID_PREFIX_REGEX = Pattern.compile(".*FeastImportJobId:.*");
-
-  public static final String JOB_PREFIX_DEFAULT = "feastimport";
-
   private JobInfoRepository jobInfoRepository;
   private ImportJobDefaults defaults;
 
@@ -153,7 +151,8 @@ public class JobExecutionService {
     commands.add(
         option("importSpecBase64", Base64.getEncoder().encodeToString(importSpec.toByteArray())));
     commands.add(option("coreApiUri", defaults.getCoreApiUri()));
-    commands.add(option("errorsStoreId", defaults.getErrorsStoreId()));
+    commands.add(option("errorsStoreType", defaults.getErrorsStoreType()));
+    commands.add(option("errorsStoreOptions", defaults.getErrorsStoreOptions()));
     options.forEach((k, v) -> commands.add(option(k, v)));
     return new ProcessBuilder(commands);
   }

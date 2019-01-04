@@ -75,16 +75,15 @@ public interface ImportJobOptions extends PipelineOptions, FlinkPipelineOptions,
   void setLimit(Long value);
 
   @Description(
-      "Set an errors store type. One of: [STDERR, STDOUT, JSON]. Note that you should not use " +
-              "STDERR/STDOUT in production unless your data volume is extremely small.")
+      "Set an errors store type. One of: [STDERR, STDOUT, JSON]. Note that you should not use "
+          + "STDERR/STDOUT in production unless your data volume is extremely small.")
   String getErrorsStoreType();
 
   void setErrorsStoreType(String value);
 
   @Description(
-      "Provide errors store options as a json string containing key-values. Options required" +
-              "depend on the type of store set."
-  )
+      "Provide errors store options as a json string containing key-values. Options required"
+          + "depend on the type of store set.")
   @Default.String("{}")
   String getErrorsStoreOptions();
 

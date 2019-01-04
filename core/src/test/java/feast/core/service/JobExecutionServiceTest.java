@@ -46,10 +46,9 @@ import static org.mockito.MockitoAnnotations.initMocks;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 public class JobExecutionServiceTest {
-  private ImportJobDefaults defaults;
-  @Mock JobInfoRepository jobInfoRepository;
-
   @Rule public final ExpectedException expectedException = ExpectedException.none();
+  @Mock JobInfoRepository jobInfoRepository;
+  private ImportJobDefaults defaults;
 
   @Before
   public void setUp() {
@@ -60,7 +59,8 @@ public class JobExecutionServiceTest {
             "DirectRunner",
             "{\"key\":\"value\"}",
             "ingestion.jar",
-            "STDOUT");
+            "STDOUT",
+            "{}");
   }
 
   @Test
@@ -77,7 +77,8 @@ public class JobExecutionServiceTest {
             "--runner=DirectRunner",
             "--importSpecBase64=CgRmaWxl",
             "--coreApiUri=localhost:8080",
-            "--errorsStoreId=STDOUT",
+            "--errorsStoreType=STDOUT",
+            "--errorsStoreOptions={}",
             "--key=value");
     assertThat(pb.command(), equalTo(expected));
   }
