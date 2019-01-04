@@ -24,8 +24,8 @@ import feast.ingestion.transform.FeatureIO.Write;
 import feast.ingestion.transform.fn.LoggerDoFn;
 import feast.specs.StorageSpecProto.StorageSpec;
 import feast.storage.ErrorsStore;
-import feast.storage.file.json.JsonFileStores;
 import feast.storage.noop.NoOpIO;
+import feast.storage.service.ErrorsStoreService;
 import feast.types.FeatureRowExtendedProto.FeatureRowExtended;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -37,25 +37,26 @@ import static feast.ingestion.util.JsonUtil.convertJsonStringToMap;
 
 @Slf4j
 public class ErrorsStoreTransform extends FeatureIO.Write {
-  public static final String ERRORS_STORE_STDERR = "STDERR";
-  public static final String ERRORS_STORE_STDOUT = "STDOUT";
-  public static final String ERRORS_STORE_JSON = "JSON";
+  public static final String ERRORS_STORE_STDERR = "stderr";
+  public static final String ERRORS_STORE_STDOUT = "stdout";
+  public static final String ERRORS_STORE_JSON = "file.json";
 
   private String errorsStoreType;
-  private StorageSpec errorsStore;
+  private StorageSpec errorsStoreSpec;
+  private ErrorsStore errorsStore;
   private Specs specs;
 
   @Inject
-  public ErrorsStoreTransform(ImportJobOptions options, Specs specs) {
+  public ErrorsStoreTransform(ImportJobOptions options, Specs specs, ErrorsStore errorsStore) {
     this.specs = specs;
     this.errorsStoreType = options.getErrorsStoreType();
-    StorageSpec.Builder errorsStoreBuilder = StorageSpec.newBuilder();
+    this.errorsStore = errorsStore;
+    StorageSpec.Builder errorsStoreBuilder = StorageSpec.newBuilder().setType(errorsStoreType);
     switch (errorsStoreType) {
       case ERRORS_STORE_JSON:
-        errorsStoreBuilder.setType("file.json");
         errorsStoreBuilder.putAllOptions(convertJsonStringToMap(options.getErrorsStoreOptions()));
       default:
-        this.errorsStore = errorsStoreBuilder.build();
+        this.errorsStoreSpec = errorsStoreBuilder.build();
     }
   }
 
@@ -68,13 +69,13 @@ public class ErrorsStoreTransform extends FeatureIO.Write {
       case ERRORS_STORE_STDERR:
         input.apply("Log errors to STDERR", ParDo.of(new LoggerDoFn(Level.ERROR)));
         break;
-      case ERRORS_STORE_JSON:
-        ErrorsStore es = new JsonFileStores.JsonFileErrorsStore();
-        Write write = es.create(this.errorsStore, specs);
-        return input.apply(write);
       default:
-        log.warn("No valid errors store type specified, errors will be discarded");
-        return input.apply(new NoOpIO.Write());
+        if (errorsStore == null) {
+          log.warn("No valid errors store type specified, errors will be discarded");
+          return input.apply(new NoOpIO.Write());
+        }
+        Write write = errorsStore.create(this.errorsStoreSpec, specs);
+        return input.apply(write);
     }
     return PDone.in(input.getPipeline());
   }

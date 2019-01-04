@@ -15,27 +15,20 @@
  *
  */
 
-package feast.storage;
+package feast.storage.service;
 
-import com.google.auto.service.AutoService;
-import lombok.Getter;
-import feast.ingestion.model.Specs;
-import feast.specs.StorageSpecProto.StorageSpec;
+import feast.storage.ErrorsStore;
+import lombok.extern.slf4j.Slf4j;
 
-@AutoService(ErrorsStore.class)
-public class MockErrorsStore implements ErrorsStore {
-  public static final String MOCK_ERRORS_STORE_TYPE = "errors.mock";
+@Slf4j
+public class ErrorsStoreService {
+  private static ErrorsStore errorsStore;
 
-  @Getter private MockTransforms.Write write;
-
-  @Override
-  public MockTransforms.Write create(StorageSpec storageSpec, Specs specs) {
-    write = new MockTransforms.Write(storageSpec);
-    return write;
+  public static ErrorsStore get() {
+    return errorsStore;
   }
 
-  @Override
-  public String getType() {
-    return MOCK_ERRORS_STORE_TYPE;
+  public static void register(ErrorsStore store) {
+    errorsStore = store;
   }
 }

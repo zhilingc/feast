@@ -79,12 +79,13 @@ public interface ImportJobOptions extends PipelineOptions, FlinkPipelineOptions,
               "STDERR/STDOUT in production unless your data volume is extremely small.")
   String getErrorsStoreType();
 
-  void setErrorsStoreId(String value);
+  void setErrorsStoreType(String value);
 
   @Description(
       "Provide errors store options as a json string containing key-values. Options required" +
               "depend on the type of store set."
   )
+  @Default.String("{}")
   String getErrorsStoreOptions();
 
   void setErrorsStoreOptions(String value);
