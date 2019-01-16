@@ -59,7 +59,7 @@ public class JobExecutionServiceTest {
     initMocks(this);
     Map<String, String> importJobOptions = new HashMap<>();
     importJobOptions.put("key", "value");
-    JobConfig jobConfig = new JobConfig();
+    jobConfig = new JobConfig();
     jobConfig.setCoreApiUrl("localhost:8080");
     jobConfig.setRunner("DirectRunner");
     jobConfig.setOptions(importJobOptions);
@@ -82,7 +82,7 @@ public class JobExecutionServiceTest {
             "--runner=DirectRunner",
             "--importSpecBase64=CgRmaWxl",
             "--coreApiUrl=localhost:8080",
-            "--errorsStoreType=STDOUT",
+            "--errorsStoreType=stdout",
             "--errorsStoreOptions={}",
             "--key=value");
     assertThat(pb.command(), equalTo(expected));

@@ -1,0 +1,25 @@
+grpc:
+  server:
+    port: 6566
+    address: 0.0.0.0
+http:
+  server:
+    port: 8080
+
+feast:
+  jobConfig:
+    coreApiUrl: localhost:6566
+    runner: DirectRunner
+    #    options:
+    #      projectId: my-dataflow-project
+    #      region: my-dataflow-location
+    executable: feast-ingestion.jar
+    errorsStoreType: stdout
+    #      errorsStoreOptions:
+    #        path: gs://my-errors-store-bucket
+    monitoringPeriod: 5000
+    monitoringInitialDelay: 60000
+  statsd:
+    enabled: true
+    host: localhost
+    port: 8125

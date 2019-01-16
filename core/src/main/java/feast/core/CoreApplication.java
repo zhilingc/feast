@@ -31,7 +31,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @Slf4j
 public class CoreApplication {
   public static void main(String[] args) {
-    System.setProperty("spring.config.name", "feast-conf");
+    System.setProperty("spring.config.name", "feast-core-conf");
     SpringApplication.run(CoreApplication.class, args);
   }
 }
