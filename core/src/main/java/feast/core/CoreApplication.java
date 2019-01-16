@@ -20,15 +20,18 @@ package feast.core;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @EnableScheduling
 @SpringBootApplication
+@EnableConfigurationProperties
 @EnableJpaRepositories(basePackages = "feast.core.dao")
 @Slf4j
 public class CoreApplication {
   public static void main(String[] args) {
+    System.setProperty("spring.config.name", "feast-conf");
     SpringApplication.run(CoreApplication.class, args);
   }
 }

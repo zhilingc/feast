@@ -28,16 +28,15 @@ import feast.core.storage.BigQueryViewTemplater;
 import feast.core.storage.SchemaManager;
 import feast.core.validators.SpecValidator;
 import feast.specs.StorageSpecProto.StorageSpec;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 
 /**
  * Configuration providing utility objects for the core application.
@@ -47,6 +46,7 @@ public class ServerUtilConfig {
 
   /**
    * Get a BigQuery view templater.
+   *
    * @return BigQueryViewTemplater
    */
   @Bean
@@ -60,17 +60,18 @@ public class ServerUtilConfig {
 
   /**
    * Get the storage schema manager.
+   *
    * @return SchemaManager
    */
   @Bean
   public SchemaManager schemaManager(StorageInfoRepository storageInfoRepository,
-                                     BigQueryViewTemplater bigQueryViewTemplater) {
+      BigQueryViewTemplater bigQueryViewTemplater) {
     List<StorageSpec> storageSpecList =
-            storageInfoRepository
-                    .findAll()
-                    .stream()
-                    .map(StorageInfo::getStorageSpec)
-                    .collect(Collectors.toList());
+        storageInfoRepository
+            .findAll()
+            .stream()
+            .map(StorageInfo::getStorageSpec)
+            .collect(Collectors.toList());
     SchemaManager schemaManager = new SchemaManager(bigQueryViewTemplater);
     schemaManager.registerStorages(storageSpecList);
     return schemaManager;
@@ -78,20 +79,21 @@ public class ServerUtilConfig {
 
   /**
    * Get a spec validator.
+   *
    * @return SpecValidator
    */
   @Bean
   public SpecValidator specValidator(
-          StorageInfoRepository storageInfoRepository,
-          EntityInfoRepository entityInfoRepository,
-          FeatureGroupInfoRepository featureGroupInfoRepository,
-          FeatureInfoRepository featureInfoRepository) {
+      StorageInfoRepository storageInfoRepository,
+      EntityInfoRepository entityInfoRepository,
+      FeatureGroupInfoRepository featureGroupInfoRepository,
+      FeatureInfoRepository featureInfoRepository) {
     SpecValidator specValidator =
-            new SpecValidator(
-                    storageInfoRepository,
-                    entityInfoRepository,
-                    featureGroupInfoRepository,
-                    featureInfoRepository);
+        new SpecValidator(
+            storageInfoRepository,
+            entityInfoRepository,
+            featureGroupInfoRepository,
+            featureInfoRepository);
     return specValidator;
   }
 }

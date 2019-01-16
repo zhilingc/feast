@@ -18,7 +18,7 @@
 package feast.core.service;
 
 import feast.core.JobServiceProto.JobServiceTypes.SubmitImportJobResponse;
-import feast.core.config.ImportJobDefaults;
+import feast.core.config.FeastConfig.JobConfig;
 import feast.core.dao.JobInfoRepository;
 import feast.core.exception.JobExecutionException;
 import feast.core.log.Action;
@@ -49,12 +49,12 @@ public class JobExecutionService {
   private static final int SLEEP_MS = 10;
   private static final Pattern JOB_EXT_ID_PREFIX_REGEX = Pattern.compile(".*FeastImportJobId:.*");
   private JobInfoRepository jobInfoRepository;
-  private ImportJobDefaults defaults;
+  private JobConfig jobConfig;
 
   @Autowired
-  public JobExecutionService(JobInfoRepository jobInfoRepository, ImportJobDefaults defaults) {
+  public JobExecutionService(JobInfoRepository jobInfoRepository, JobConfig jobConfig) {
     this.jobInfoRepository = jobInfoRepository;
-    this.defaults = defaults;
+    this.jobConfig = jobConfig;
   }
 
   /**
@@ -75,9 +75,10 @@ public class JobExecutionService {
         jobId,
         Action.SUBMIT,
         "Building graph and submitting to %s",
-        defaults.getRunner());
+        jobConfig.getRunner());
     try {
-      JobInfo jobInfo = new JobInfo(jobId, "", defaults.getRunner(), importSpec, JobStatus.PENDING);
+      JobInfo jobInfo = new JobInfo(jobId, "", jobConfig.getRunner(), importSpec,
+          JobStatus.PENDING);
       jobInfoRepository.saveAndFlush(jobInfo);
       Process p = pb.start();
       String jobExtId = runProcess(p);
@@ -91,7 +92,7 @@ public class JobExecutionService {
           jobId,
           Action.STATUS_CHANGE,
           "Job submitted to runner %s with runner id %s.",
-          defaults.getRunner(),
+          jobConfig.getRunner(),
           jobExtId);
       return SubmitImportJobResponse.newBuilder().setJobId(jobId).build();
     } catch (Exception e) {
@@ -101,7 +102,7 @@ public class JobExecutionService {
           jobId,
           Action.STATUS_CHANGE,
           "Job failed to be submitted to runner %s. Job status changed to ERROR.",
-          defaults.getRunner());
+          jobConfig.getRunner());
       throw new JobExecutionException(String.format("Error running ingestion job: %s", e), e);
     }
   }
@@ -136,19 +137,19 @@ public class JobExecutionService {
    * @return configured ProcessBuilder
    */
   public ProcessBuilder getProcessBuilder(ImportSpec importSpec, String jobId) {
-    Map<String, String> options =
-        TypeConversion.convertJsonStringToMap(defaults.getImportJobOptions());
+    Map<String, String> options = jobConfig.getOptions();
     List<String> commands = new ArrayList<>();
     commands.add("java");
     commands.add("-jar");
-    commands.add(defaults.getExecutable());
+    commands.add(jobConfig.getExecutable());
     commands.add(option("jobName", jobId));
-    commands.add(option("runner", defaults.getRunner()));
+    commands.add(option("runner", jobConfig.getRunner()));
     commands.add(
         option("importSpecBase64", Base64.getEncoder().encodeToString(importSpec.toByteArray())));
-    commands.add(option("coreApiUri", defaults.getCoreApiUri()));
-    commands.add(option("errorsStoreType", defaults.getErrorsStoreType()));
-    commands.add(option("errorsStoreOptions", defaults.getErrorsStoreOptions()));
+    commands.add(option("coreApiUrl", jobConfig.getCoreApiUrl()));
+    commands.add(option("errorsStoreType", jobConfig.getErrorsStoreType()));
+    commands.add(option("errorsStoreOptions",
+        TypeConversion.convertMapToJsonString(jobConfig.getErrorsStoreOptions())));
     options.forEach((k, v) -> commands.add(option(k, v)));
     return new ProcessBuilder(commands);
   }

@@ -34,8 +34,8 @@ import feast.core.job.dataflow.DataflowJobManager;
 import feast.core.job.dataflow.DataflowJobMonitor;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -47,28 +47,42 @@ import org.springframework.context.annotation.Configuration;
 public class JobConfig {
 
   /**
+   * Get Import job default options that will be passed to the ingestion jar when an ingestion job
+   * is triggered
+   *
+   * @param config feast configuration
+   * @return ImportJobDefaults
+   */
+  @Bean
+  public FeastConfig.JobConfig getJobConfig(FeastConfig config) {
+    return config.getJobConfig();
+  }
+
+  /**
    * Get configuration for dataflow connection
-   * @param projectId
-   * @param location
+   *
+   * @param jobConfig import job configuration
    * @return DataflowJobConfig
    */
   @Bean
-  public DataflowJobConfig getDataflowJobConfig(
-      @Value("${feast.jobs.dataflow.projectId}") String projectId,
-      @Value("${feast.jobs.dataflow.location}") String location) {
+  public DataflowJobConfig getDataflowJobConfig(FeastConfig.JobConfig jobConfig) {
+    Map<String, String> jobOptions = jobConfig.getOptions();
+    String projectId = jobOptions.getOrDefault("project", "");
+    String location = jobOptions.getOrDefault("region", "");
     return new DataflowJobConfig(projectId, location);
   }
 
   /**
    * Get a JobManager according to the runner type and dataflow configuration.
-   * @param runnerType runner type: one of [DataflowRunner, DirectRunner, FlinkRunner]
-   * @param dfConfig dataflow job configuration
+   *
+   * @param jobConfig import job config
+   * @param dfConfig dataflow config
    * @return JobManager
    */
   @Bean
-  public JobManager getJobManager(@Value("${feast.jobs.runner}") String runnerType,
+  public JobManager getJobManager(FeastConfig.JobConfig jobConfig,
       DataflowJobConfig dfConfig) {
-    if ("DataflowRunner".equals(runnerType)) {
+    if ("DataflowRunner".equals(jobConfig.getRunner())) {
       if (Strings.isNullOrEmpty(dfConfig.getLocation()) ||
           Strings.isNullOrEmpty(dfConfig.getProjectId())) {
         log.error("Project and location of the Dataflow runner is not configured");
@@ -98,14 +112,15 @@ public class JobConfig {
 
   /**
    * Get a Job Monitor given the runner type and dataflow configuration.
-   * @param runnerType runner type: one of [DataflowRunner, DirectRunner, FlinkRunner]
-   * @param dfConfig dataflow job configuration
+   *
+   * @param jobConfig import job config
+   * @param dfConfig dataflow config
    * @return JobMonitor
    */
   @Bean
-  public JobMonitor getJobMonitor(@Value("${feast.jobs.runner}") String runnerType,
+  public JobMonitor getJobMonitor(FeastConfig.JobConfig jobConfig,
       DataflowJobConfig dfConfig) {
-    if ("DataflowRunner".equals(runnerType)) {
+    if ("DataflowRunner".equals(jobConfig.getRunner())) {
       if (Strings.isNullOrEmpty(dfConfig.getLocation()) ||
           Strings.isNullOrEmpty(dfConfig.getProjectId())) {
         log.warn(
@@ -137,11 +152,11 @@ public class JobConfig {
 
   /**
    * Get metrics pusher to statsd
-   * @param statsDClient
+   *
    * @return StatsdMetricPusher
    */
   @Bean
-  public StatsdMetricPusher getStatsdMetricPusher(StatsDClient statsDClient){
+  public StatsdMetricPusher getStatsdMetricPusher(StatsDClient statsDClient) {
     return new StatsdMetricPusher(statsDClient);
   }
 }

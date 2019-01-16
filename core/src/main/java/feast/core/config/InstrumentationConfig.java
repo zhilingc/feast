@@ -19,15 +19,15 @@ package feast.core.config;
 
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class InstrumentationConfig {
+
   @Bean
-  public StatsDClient getStatsDClient(@Value("${statsd.host}") String host,
-      @Value("${statsd.port}") int port) {
-    return new NonBlockingStatsDClient("feast_core", host, port);
+  public StatsDClient getStatsDClient(FeastConfig config) {
+    return new NonBlockingStatsDClient("feast_core", config.getStatsd().getHost(),
+        config.getStatsd().getPort());
   }
 }

@@ -18,6 +18,7 @@
 package feast.core.job;
 
 import com.google.common.base.Strings;
+import feast.core.config.FeastConfig;
 import feast.core.dao.JobInfoRepository;
 import feast.core.log.Action;
 import feast.core.log.AuditLogger;
@@ -52,8 +53,8 @@ public class ScheduledJobMonitor {
   }
 
   @Scheduled(
-      fixedDelayString = "${feast.jobs.monitor.period}",
-      initialDelayString = "${feast.jobs.monitor.initialDelay}")
+      fixedDelayString = "${feast.jobConfig.monitoringPeriod}",
+      initialDelayString = "${feast.jobConfig.monitoringInitialDelay}")
   public void pollStatusAndMetrics() {
     getJobMetrics();
     getJobStatus();

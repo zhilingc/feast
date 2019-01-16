@@ -25,7 +25,7 @@ import static org.mockito.MockitoAnnotations.initMocks;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 import com.google.common.collect.Lists;
-import feast.core.config.ImportJobDefaults;
+import feast.core.config.FeastConfig.JobConfig;
 import feast.core.dao.JobInfoRepository;
 import feast.core.model.JobInfo;
 import feast.core.model.JobStatus;
@@ -34,7 +34,9 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
@@ -50,24 +52,25 @@ public class JobExecutionServiceTest {
   public final ExpectedException expectedException = ExpectedException.none();
   @Mock
   JobInfoRepository jobInfoRepository;
-  private ImportJobDefaults defaults;
+  private JobConfig jobConfig;
 
   @Before
   public void setUp() {
     initMocks(this);
-    defaults =
-        new ImportJobDefaults(
-            "localhost:8080",
-            "DirectRunner",
-            "{\"key\":\"value\"}",
-            "ingestion.jar",
-            "STDOUT",
-            "{}");
+    Map<String, String> importJobOptions = new HashMap<>();
+    importJobOptions.put("key", "value");
+    JobConfig jobConfig = new JobConfig();
+    jobConfig.setCoreApiUrl("localhost:8080");
+    jobConfig.setRunner("DirectRunner");
+    jobConfig.setOptions(importJobOptions);
+    jobConfig.setExecutable("ingestion.jar");
+    jobConfig.setErrorsStoreType("stdout");
+    jobConfig.setErrorsStoreOptions(new HashMap<>());
   }
 
   @Test
   public void shouldBuildProcessBuilderWithCorrectOptions() {
-    JobExecutionService jobExecutionService = new JobExecutionService(jobInfoRepository, defaults);
+    JobExecutionService jobExecutionService = new JobExecutionService(jobInfoRepository, jobConfig);
     ImportSpec importSpec = ImportSpec.newBuilder().setType("file").build();
     ProcessBuilder pb = jobExecutionService.getProcessBuilder(importSpec, "test");
     List<String> expected =
@@ -78,7 +81,7 @@ public class JobExecutionServiceTest {
             "--jobName=test",
             "--runner=DirectRunner",
             "--importSpecBase64=CgRmaWxl",
-            "--coreApiUri=localhost:8080",
+            "--coreApiUrl=localhost:8080",
             "--errorsStoreType=STDOUT",
             "--errorsStoreOptions={}",
             "--key=value");
@@ -91,7 +94,7 @@ public class JobExecutionServiceTest {
     when(jobInfoRepository.findById("jobid")).thenReturn(Optional.of(jobInfo));
 
     ArgumentCaptor<JobInfo> jobInfoArgumentCaptor = ArgumentCaptor.forClass(JobInfo.class);
-    JobExecutionService jobExecutionService = new JobExecutionService(jobInfoRepository, defaults);
+    JobExecutionService jobExecutionService = new JobExecutionService(jobInfoRepository, jobConfig);
     jobExecutionService.updateJobStatus("jobid", JobStatus.PENDING);
 
     verify(jobInfoRepository, times(1)).saveAndFlush(jobInfoArgumentCaptor.capture());
@@ -107,7 +110,7 @@ public class JobExecutionServiceTest {
     when(jobInfoRepository.findById("jobid")).thenReturn(Optional.of(jobInfo));
 
     ArgumentCaptor<JobInfo> jobInfoArgumentCaptor = ArgumentCaptor.forClass(JobInfo.class);
-    JobExecutionService jobExecutionService = new JobExecutionService(jobInfoRepository, defaults);
+    JobExecutionService jobExecutionService = new JobExecutionService(jobInfoRepository, jobConfig);
     jobExecutionService.updateJobExtId("jobid", "extid");
 
     verify(jobInfoRepository, times(1)).saveAndFlush(jobInfoArgumentCaptor.capture());
@@ -130,7 +133,7 @@ public class JobExecutionServiceTest {
     when(process.getErrorStream()).thenReturn(errorStream);
     when(process.exitValue()).thenReturn(0);
     when(process.isAlive()).thenReturn(true).thenReturn(false);
-    JobExecutionService jobExecutionService = new JobExecutionService(jobInfoRepository, defaults);
+    JobExecutionService jobExecutionService = new JobExecutionService(jobInfoRepository, jobConfig);
     String jobId = jobExecutionService.runProcess(process);
     assertThat(jobId, equalTo("1231231231"));
   }
@@ -149,7 +152,7 @@ public class JobExecutionServiceTest {
     when(process.exitValue()).thenReturn(1);
     when(process.isAlive()).thenReturn(true).thenReturn(false);
     expectedException.expect(RuntimeException.class);
-    JobExecutionService jobExecutionService = new JobExecutionService(jobInfoRepository, defaults);
+    JobExecutionService jobExecutionService = new JobExecutionService(jobInfoRepository, jobConfig);
     jobExecutionService.runProcess(process);
   }
 }
