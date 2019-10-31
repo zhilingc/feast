@@ -14,7 +14,9 @@ import feast.ingestion.utils.ResourceUtil;
 import feast.ingestion.values.FailedElement;
 import feast.store.serving.bigquery.FeatureRowToTableRowDoFn;
 import feast.store.serving.redis.FeatureRowToRedisMutationDoFn;
+import feast.store.serving.redis.FilterOutOfOrderRows;
 import feast.store.serving.redis.RedisCustomIO;
+import feast.store.serving.redis.RedisCustomIO.RedisMutation;
 import feast.types.FeatureRowProto.FeatureRow;
 import java.io.IOException;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
@@ -25,10 +27,17 @@ import org.apache.beam.sdk.io.gcp.bigquery.BigQueryInsertError;
 import org.apache.beam.sdk.io.gcp.bigquery.InsertRetryPolicy;
 import org.apache.beam.sdk.io.gcp.bigquery.WriteResult;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.GroupByKey;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.windowing.AfterPane;
+import org.apache.beam.sdk.transforms.windowing.AfterWatermark;
+import org.apache.beam.sdk.transforms.windowing.FixedWindows;
+import org.apache.beam.sdk.transforms.windowing.Window;
+import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PDone;
+import org.joda.time.Duration;
 import org.slf4j.Logger;
 
 @AutoValue
@@ -46,6 +55,7 @@ public abstract class WriteToStore extends PTransform<PCollection<FeatureRow>, P
 
   @AutoValue.Builder
   public abstract static class Builder {
+
     public abstract Builder setStore(Store store);
 
     public abstract Builder setFeatureSetSpec(FeatureSetSpec featureSetSpec);
@@ -63,8 +73,7 @@ public abstract class WriteToStore extends PTransform<PCollection<FeatureRow>, P
         RedisConfig redisConfig = getStore().getRedisConfig();
         input
             .apply(
-                "FeatureRowToRedisMutation",
-                ParDo.of(new FeatureRowToRedisMutationDoFn(getFeatureSetSpec())))
+                "FeatureRowToRedisMutation", new FilterOutOfOrderRows(getFeatureSetSpec()))
             .apply(
                 "WriteRedisMutationToRedis",
                 RedisCustomIO.write(redisConfig.getHost(), redisConfig.getPort()));

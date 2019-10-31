@@ -19,6 +19,7 @@
 package feast.store.serving.redis;
 
 import com.google.auto.value.AutoValue;
+import com.google.protobuf.Timestamp;
 import java.io.Serializable;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.coders.DefaultCoder;
@@ -93,6 +94,8 @@ public class RedisCustomIO {
 
     public abstract Method getMethod();
 
+    public abstract Timestamp getEventTimestamp();
+
     public abstract byte[] getKey();
 
     public abstract byte[] getValue();
@@ -114,6 +117,8 @@ public class RedisCustomIO {
     public abstract static class Builder {
 
       public abstract Builder setMethod(Method method);
+
+      public abstract Builder setEventTimestamp(Timestamp timestamp);
 
       public abstract Builder setKey(byte[] key);
 

@@ -28,9 +28,10 @@ import feast.types.FieldProto.Field;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.values.KV;
 import org.slf4j.Logger;
 
-public class FeatureRowToRedisMutationDoFn extends DoFn<FeatureRow, RedisMutation> {
+public class FeatureRowToRedisMutationDoFn extends DoFn<FeatureRow, KV<RedisKey, RedisMutation>> {
 
   private static final Logger log = org.slf4j.LoggerFactory
       .getLogger(FeatureRowToRedisMutationDoFn.class);
@@ -61,11 +62,11 @@ public class FeatureRowToRedisMutationDoFn extends DoFn<FeatureRow, RedisMutatio
   public void processElement(ProcessContext context) {
     FeatureRow featureRow = context.element();
     RedisKey key = getKey(featureRow);
-    context.output(
-        RedisMutation.newBuilder()
-            .setKey(key.toByteArray())
-            .setValue(featureRow.toByteArray())
-            .setMethod(Method.SET)
-            .build());
+    context.output(KV.of(key, RedisMutation.newBuilder()
+        .setKey(key.toByteArray())
+        .setEventTimestamp(featureRow.getEventTimestamp())
+        .setValue(featureRow.toByteArray())
+        .setMethod(Method.SET)
+        .build()));
   }
 }
