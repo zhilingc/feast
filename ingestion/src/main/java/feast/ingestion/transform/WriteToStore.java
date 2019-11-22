@@ -33,7 +33,6 @@ import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PDone;
 import org.apache.beam.sdk.values.ValueInSingleWindow;
-import org.codehaus.jackson.JsonParser.Feature;
 import org.slf4j.Logger;
 
 @AutoValue
@@ -76,7 +75,6 @@ public abstract class WriteToStore extends PTransform<PCollection<FeatureRow>, P
                 RedisCustomIO.write(redisConfig.getHost(), redisConfig.getPort()));
         break;
       case BIGQUERY:
-
         BigQueryConfig bigqueryConfig = getStore().getBigqueryConfig();
         TimePartitioning timePartitioning =
             new TimePartitioning()
@@ -84,26 +82,29 @@ public abstract class WriteToStore extends PTransform<PCollection<FeatureRow>, P
                 .setField(FeatureRowToTableRow.getEventTimestampColumn());
 
         WriteResult bigqueryWriteResult =
-            input
-                .apply(
-                    "WriteTableRowToBigQuery",
-                    BigQueryIO.<FeatureRow>write()
-                        .to((SerializableFunction<ValueInSingleWindow<FeatureRow>, TableDestination>) element -> {
-                          String[] split = element.getValue().getFeatureSet().split(":");
-                          return new TableDestination(String.format(
-                              "%s:%s.%s_v%s",
-                              bigqueryConfig.getProjectId(),
-                              bigqueryConfig.getDatasetId(),
-                              split[0],
-                              split[1]), null);
-                        })
-                        .withFormatFunction(new FeatureRowToTableRow(options.getJobName()))
-                        .withCreateDisposition(CreateDisposition.CREATE_NEVER)
-                        .withWriteDisposition(WriteDisposition.WRITE_APPEND)
-                        .withExtendedErrorInfo()
-                        .withMethod(Method.STREAMING_INSERTS)
-                        .withFailedInsertRetryPolicy(InsertRetryPolicy.retryTransientErrors())
-                        .withTimePartitioning(timePartitioning));
+            input.apply(
+                "WriteTableRowToBigQuery",
+                BigQueryIO.<FeatureRow>write()
+                    .to(
+                        (SerializableFunction<ValueInSingleWindow<FeatureRow>, TableDestination>)
+                            element -> {
+                              String[] split = element.getValue().getFeatureSet().split(":");
+                              return new TableDestination(
+                                  String.format(
+                                      "%s:%s.%s_v%s",
+                                      bigqueryConfig.getProjectId(),
+                                      bigqueryConfig.getDatasetId(),
+                                      split[0],
+                                      split[1]),
+                                  null);
+                            })
+                    .withFormatFunction(new FeatureRowToTableRow(options.getJobName()))
+                    .withCreateDisposition(CreateDisposition.CREATE_NEVER)
+                    .withWriteDisposition(WriteDisposition.WRITE_APPEND)
+                    .withExtendedErrorInfo()
+                    .withMethod(Method.STREAMING_INSERTS)
+                    .withFailedInsertRetryPolicy(InsertRetryPolicy.retryTransientErrors())
+                    .withTimePartitioning(timePartitioning));
 
         if (options.getDeadLetterTableSpec() != null) {
           bigqueryWriteResult

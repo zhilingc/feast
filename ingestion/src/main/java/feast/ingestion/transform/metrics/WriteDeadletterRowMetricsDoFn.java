@@ -4,18 +4,17 @@ import com.google.auto.value.AutoValue;
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
 import com.timgroup.statsd.StatsDClientException;
-import feast.core.FeatureSetProto.FeatureSetSpec;
 import feast.ingestion.values.FailedElement;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.KV;
 import org.slf4j.Logger;
 
 @AutoValue
-public abstract class WriteDeadletterRowMetricsDoFn extends
-    DoFn<KV<Integer, Iterable<FailedElement>>, Void> {
+public abstract class WriteDeadletterRowMetricsDoFn
+    extends DoFn<KV<Integer, Iterable<FailedElement>>, Void> {
 
-  private static final Logger log = org.slf4j.LoggerFactory
-      .getLogger(WriteDeadletterRowMetricsDoFn.class);
+  private static final Logger log =
+      org.slf4j.LoggerFactory.getLogger(WriteDeadletterRowMetricsDoFn.class);
 
   private final String INGESTION_JOB_NAME_KEY = "ingestion_job_name";
   private final String METRIC_PREFIX = "feast_ingestion";
@@ -45,16 +44,11 @@ public abstract class WriteDeadletterRowMetricsDoFn extends
     public abstract Builder setStatsdPort(int statsdPort);
 
     public abstract WriteDeadletterRowMetricsDoFn build();
-
   }
 
   @Setup
   public void setup() {
-    statsd = new NonBlockingStatsDClient(
-        METRIC_PREFIX,
-        getStatsdHost(),
-        getStatsdPort()
-    );
+    statsd = new NonBlockingStatsDClient(METRIC_PREFIX, getStatsdHost(), getStatsdPort());
   }
 
   @ProcessElement
@@ -62,7 +56,9 @@ public abstract class WriteDeadletterRowMetricsDoFn extends
 
     for (FailedElement ignored : c.element().getValue()) {
       try {
-        statsd.count("deadletter_row_count", 1,
+        statsd.count(
+            "deadletter_row_count",
+            1,
             STORE_TAG_KEY + ":" + getStoreName(),
             FEATURE_SET_NAME_TAG_KEY + ":" + ignored.getFeatureSetName(),
             FEATURE_SET_VERSION_TAG_KEY + ":" + ignored.getFeatureSetVersion(),
