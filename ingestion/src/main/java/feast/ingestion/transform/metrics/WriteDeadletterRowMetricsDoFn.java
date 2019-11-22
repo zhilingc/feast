@@ -12,6 +12,8 @@ import org.slf4j.Logger;
 public abstract class WriteDeadletterRowMetricsDoFn extends
     DoFn<FailedElement, Void> {
 
+  private static final Logger log =
+      org.slf4j.LoggerFactory.getLogger(WriteDeadletterRowMetricsDoFn.class);
   private static final Logger log = org.slf4j.LoggerFactory
       .getLogger(WriteDeadletterRowMetricsDoFn.class);
 
@@ -48,6 +50,7 @@ public abstract class WriteDeadletterRowMetricsDoFn extends
 
   @Setup
   public void setup() {
+    statsd = new NonBlockingStatsDClient(METRIC_PREFIX, getStatsdHost(), getStatsdPort());
     statsd = new NonBlockingStatsDClient(
         METRIC_PREFIX,
         getStatsdHost(),

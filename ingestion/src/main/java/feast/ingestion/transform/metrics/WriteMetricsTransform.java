@@ -12,7 +12,6 @@ import org.apache.beam.sdk.values.PDone;
 import org.apache.beam.sdk.values.TupleTag;
 import org.slf4j.Logger;
 
-
 @AutoValue
 public abstract class WriteMetricsTransform extends PTransform<PCollectionTuple, PDone> {
 
@@ -30,6 +29,7 @@ public abstract class WriteMetricsTransform extends PTransform<PCollectionTuple,
   public abstract static class Builder {
 
     public abstract Builder setStoreName(String storeName);
+
     public abstract Builder setSuccessTag(TupleTag<FeatureRow> successTag);
 
     public abstract Builder setFailureTag(TupleTag<FailedElement> failureTag);
@@ -39,8 +39,7 @@ public abstract class WriteMetricsTransform extends PTransform<PCollectionTuple,
 
   @Override
   public PDone expand(PCollectionTuple input) {
-    ImportOptions options = input.getPipeline().getOptions()
-        .as(ImportOptions.class);
+    ImportOptions options = input.getPipeline().getOptions().as(ImportOptions.class);
     switch (options.getMetricsExporterType()) {
       case "statsd":
 
@@ -63,6 +62,15 @@ public abstract class WriteMetricsTransform extends PTransform<PCollectionTuple,
         return PDone.in(input.getPipeline());
       case "none":
       default:
+        input
+            .get(getSuccessTag())
+            .apply(
+                "Noop",
+                ParDo.of(
+                    new DoFn<FeatureRow, Void>() {
+                      @ProcessElement
+                      public void processElement(ProcessContext c) {}
+                    }));
         input.get(getSuccessTag()).apply("Noop",
             ParDo.of(new DoFn<FeatureRow, Void>() {
               @ProcessElement
