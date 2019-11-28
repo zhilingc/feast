@@ -80,6 +80,7 @@ public abstract class WriteToStore extends PTransform<PCollection<FeatureRow>, P
 
     switch (storeType) {
       case REDIS:
+
         RedisConfig redisConfig = getStore().getRedisConfig();
         input
             .apply(
@@ -91,10 +92,6 @@ public abstract class WriteToStore extends PTransform<PCollection<FeatureRow>, P
         break;
       case BIGQUERY:
         BigQueryConfig bigqueryConfig = getStore().getBigqueryConfig();
-        TimePartitioning timePartitioning =
-            new TimePartitioning()
-                .setType("DAY")
-                .setField(FeatureRowToTableRow.getEventTimestampColumn());
 
         WriteResult bigqueryWriteResult =
             input.apply(
