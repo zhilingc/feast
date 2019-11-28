@@ -26,7 +26,6 @@ import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollectionTuple;
 import org.apache.beam.sdk.values.PDone;
 import org.apache.beam.sdk.values.TupleTag;
-import org.slf4j.Logger;
 
 @AutoValue
 public abstract class WriteMetricsTransform extends PTransform<PCollectionTuple, PDone> {
@@ -58,22 +57,27 @@ public abstract class WriteMetricsTransform extends PTransform<PCollectionTuple,
     ImportOptions options = input.getPipeline().getOptions().as(ImportOptions.class);
     switch (options.getMetricsExporterType()) {
       case "statsd":
+        input
+            .get(getFailureTag())
+            .apply(
+                "WriteDeadletterMetrics",
+                ParDo.of(
+                    WriteDeadletterRowMetricsDoFn.newBuilder()
+                        .setStatsdHost(options.getStatsdHost())
+                        .setStatsdPort(options.getStatsdPort())
+                        .setStoreName(getStoreName())
+                        .build()));
 
-        input.get(getFailureTag())
-            .apply("WriteDeadletterMetrics", ParDo.of(
-                WriteDeadletterRowMetricsDoFn.newBuilder()
-                    .setStatsdHost(options.getStatsdHost())
-                    .setStatsdPort(options.getStatsdPort())
-                    .setStoreName(getStoreName())
-                    .build()));
-
-        input.get(getSuccessTag())
-            .apply("WriteRowMetrics", ParDo
-                .of(WriteRowMetricsDoFn.newBuilder()
-                    .setStatsdHost(options.getStatsdHost())
-                    .setStatsdPort(options.getStatsdPort())
-                    .setStoreName(getStoreName())
-                    .build()));
+        input
+            .get(getSuccessTag())
+            .apply(
+                "WriteRowMetrics",
+                ParDo.of(
+                    WriteRowMetricsDoFn.newBuilder()
+                        .setStatsdHost(options.getStatsdHost())
+                        .setStatsdPort(options.getStatsdPort())
+                        .setStoreName(getStoreName())
+                        .build()));
 
         return PDone.in(input.getPipeline());
       case "none":
@@ -87,12 +91,15 @@ public abstract class WriteMetricsTransform extends PTransform<PCollectionTuple,
                       @ProcessElement
                       public void processElement(ProcessContext c) {}
                     }));
-        input.get(getSuccessTag()).apply("Noop",
-            ParDo.of(new DoFn<FeatureRow, Void>() {
-              @ProcessElement
-              public void processElement(ProcessContext c) {
-              }
-            }));
+        input
+            .get(getSuccessTag())
+            .apply(
+                "Noop",
+                ParDo.of(
+                    new DoFn<FeatureRow, Void>() {
+                      @ProcessElement
+                      public void processElement(ProcessContext c) {}
+                    }));
         return PDone.in(input.getPipeline());
     }
   }
