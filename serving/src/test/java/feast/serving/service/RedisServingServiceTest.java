@@ -215,7 +215,6 @@ public class RedisServingServiceTest {
                 .build());
 
     List<byte[]> featureRowBytes = Lists.newArrayList(featureRows.get(0).toByteArray(), null);
-    when(specService.getFeatureSet("featureSet", 1)).thenReturn(getFeatureSetSpec());
     when(jedisPool.getResource()).thenReturn(jedis);
     when(jedis.mget(redisKeyList)).thenReturn(featureRowBytes);
     when(tracer.buildSpan(ArgumentMatchers.any())).thenReturn(Mockito.mock(SpanBuilder.class));

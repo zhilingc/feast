@@ -25,11 +25,10 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.slf4j.Logger;
 
 @AutoValue
-public abstract class WriteDeadletterRowMetricsDoFn extends
-    DoFn<FailedElement, Void> {
+public abstract class WriteDeadletterRowMetricsDoFn extends DoFn<FailedElement, Void> {
 
-  private static final Logger log = org.slf4j.LoggerFactory
-      .getLogger(WriteDeadletterRowMetricsDoFn.class);
+  private static final Logger log =
+      org.slf4j.LoggerFactory.getLogger(WriteDeadletterRowMetricsDoFn.class);
 
   private final String INGESTION_JOB_NAME_KEY = "ingestion_job_name";
   private final String METRIC_PREFIX = "feast_ingestion";
@@ -70,7 +69,9 @@ public abstract class WriteDeadletterRowMetricsDoFn extends
   public void processElement(ProcessContext c) {
     FailedElement ignored = c.element();
     try {
-      statsd.count("deadletter_row_count", 1,
+      statsd.count(
+          "deadletter_row_count",
+          1,
           STORE_TAG_KEY + ":" + getStoreName(),
           FEATURE_SET_NAME_TAG_KEY + ":" + ignored.getFeatureSetName(),
           FEATURE_SET_VERSION_TAG_KEY + ":" + ignored.getFeatureSetVersion(),

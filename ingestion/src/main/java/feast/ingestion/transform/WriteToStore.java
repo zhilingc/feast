@@ -18,7 +18,6 @@ package feast.ingestion.transform;
 
 import com.google.api.services.bigquery.model.TableDataInsertAllResponse.InsertErrors;
 import com.google.api.services.bigquery.model.TableRow;
-import com.google.api.services.bigquery.model.TimePartitioning;
 import com.google.auto.value.AutoValue;
 import feast.core.FeatureSetProto.FeatureSetSpec;
 import feast.core.StoreProto.Store;
@@ -47,7 +46,6 @@ import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PDone;
-import org.apache.beam.sdk.values.ValueInSingleWindow;
 import org.slf4j.Logger;
 
 @AutoValue
@@ -80,7 +78,6 @@ public abstract class WriteToStore extends PTransform<PCollection<FeatureRow>, P
 
     switch (storeType) {
       case REDIS:
-
         RedisConfig redisConfig = getStore().getRedisConfig();
         input
             .apply(
@@ -98,25 +95,14 @@ public abstract class WriteToStore extends PTransform<PCollection<FeatureRow>, P
                 "WriteTableRowToBigQuery",
                 BigQueryIO.<FeatureRow>write()
                     .to(
-                        (SerializableFunction<ValueInSingleWindow<FeatureRow>, TableDestination>)
-                            element -> {
-                              String[] split = element.getValue().getFeatureSet().split(":");
-                              return new TableDestination(
-                                  String.format(
-                                      "%s:%s.%s_v%s",
-                                      bigqueryConfig.getProjectId(),
-                                      bigqueryConfig.getDatasetId(),
-                                      split[0],
-                                      split[1]),
-                                  null);
-                            })
+                        new GetTableDestination(
+                            bigqueryConfig.getProjectId(), bigqueryConfig.getDatasetId()))
                     .withFormatFunction(new FeatureRowToTableRow(options.getJobName()))
                     .withCreateDisposition(CreateDisposition.CREATE_NEVER)
                     .withWriteDisposition(WriteDisposition.WRITE_APPEND)
                     .withExtendedErrorInfo()
                     .withMethod(Method.STREAMING_INSERTS)
-                    .withFailedInsertRetryPolicy(InsertRetryPolicy.retryTransientErrors())
-                    .withTimePartitioning(timePartitioning));
+                    .withFailedInsertRetryPolicy(InsertRetryPolicy.retryTransientErrors()));
 
         if (options.getDeadLetterTableSpec() != null) {
           bigqueryWriteResult
