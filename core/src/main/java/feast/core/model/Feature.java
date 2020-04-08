@@ -19,7 +19,6 @@ package feast.core.model;
 import feast.core.FeatureSetProto.FeatureSpec;
 import feast.types.ValueProto.ValueType;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 import javax.persistence.*;
 import javax.persistence.Entity;
@@ -30,9 +29,6 @@ import lombok.Setter;
 @Setter
 @Entity
 public class Feature extends Field {
-
-  @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-  private List<FeatureStatistics> statistics;
 
   public Feature() {}
 
@@ -112,10 +108,6 @@ public class Feature extends Field {
         break;
     }
     return feature;
-  }
-
-  public void addStatistics(FeatureStatistics newStatistic) {
-    this.statistics.add(newStatistic);
   }
 
   @Override
