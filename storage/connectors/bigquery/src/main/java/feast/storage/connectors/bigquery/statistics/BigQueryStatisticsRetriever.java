@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package feast.storage.connectors.bigquery.stats;
+package feast.storage.connectors.bigquery.statistics;
 
-import static feast.storage.connectors.bigquery.stats.StatsUtil.toFeatureNameStatistics;
+import static feast.storage.connectors.bigquery.statistics.StatsUtil.toFeatureNameStatistics;
 
 import com.google.auto.value.AutoValue;
 import com.google.cloud.bigquery.BigQuery;
@@ -99,30 +99,24 @@ public abstract class BigQueryStatisticsRetriever implements StatisticsRetriever
     featureSetSpec = featureSetSpecBuilder.build();
 
     try {
+      // Generate SQL for and retrieve non-histogram statistics
       String getFeatureSetStatsQuery =
           StatsQueryTemplater.createGetFeatureSetStatsQuery(
-              featureSetStatisticsQueryInfo, projectId(), datasetId());
-      String getFeatureSetHistQuery =
-          StatsQueryTemplater.createGetFeatureSetHistQuery(
               featureSetStatisticsQueryInfo, projectId(), datasetId());
       QueryJobConfiguration queryJobConfiguration =
           QueryJobConfiguration.newBuilder(getFeatureSetStatsQuery).build();
       TableResult basicStats = bigquery().query(queryJobConfiguration);
+
+      // Generate SQL for and retrieve histogram statistics
+      String getFeatureSetHistQuery =
+          StatsQueryTemplater.createGetFeatureSetHistQuery(
+              featureSetStatisticsQueryInfo, projectId(), datasetId());
       queryJobConfiguration = QueryJobConfiguration.newBuilder(getFeatureSetHistQuery).build();
       TableResult hist = bigquery().query(queryJobConfiguration);
 
-      Map<String, FieldValueList> basicStatsValues =
-          Streams.stream(basicStats.getValues())
-              .collect(
-                  Collectors.toMap(
-                      fieldValueList -> fieldValueList.get(0).getStringValue(),
-                      fieldValueList -> fieldValueList));
-      Map<String, FieldValueList> histValues =
-          Streams.stream(hist.getValues())
-              .collect(
-                  Collectors.toMap(
-                      fieldValueList -> fieldValueList.get(0).getStringValue(),
-                      fieldValueList -> fieldValueList));
+      // Convert to map of feature_name:row containing the statistics
+      Map<String, FieldValueList> basicStatsValues = getTableResultByFeatureName(basicStats);
+      Map<String, FieldValueList> histValues = getTableResultByFeatureName(hist);
 
       int totalCountIndex = basicStats.getSchema().getFields().getIndex("total_count");
       FeatureSetStatistics.Builder featureSetStatisticsBuilder =
@@ -130,6 +124,7 @@ public abstract class BigQueryStatisticsRetriever implements StatisticsRetriever
               .setNumExamples(
                   basicStatsValues.get(features.get(0)).get(totalCountIndex).getLongValue());
 
+      // Convert BQ rows to FeatureNameStatistics
       for (FeatureSpec featureSpec : featureSetSpec.getFeaturesList()) {
         FeatureNameStatistics featureNameStatistics =
             toFeatureNameStatistics(
@@ -148,5 +143,13 @@ public abstract class BigQueryStatisticsRetriever implements StatisticsRetriever
               featureSetSpec.getName(), features),
           e);
     }
+  }
+
+  private Map<String, FieldValueList> getTableResultByFeatureName(TableResult basicStats) {
+    return Streams.stream(basicStats.getValues())
+        .collect(
+            Collectors.toMap(
+                fieldValueList -> fieldValueList.get(0).getStringValue(),
+                fieldValueList -> fieldValueList));
   }
 }

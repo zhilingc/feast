@@ -14,11 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package feast.storage.connectors.bigquery.stats;
+package feast.storage.connectors.bigquery.statistics;
 
 import feast.core.FeatureSetProto.FeatureSpec;
 import feast.types.ValueProto.ValueType.Enum;
 
+/**
+ * Value class for Features containing information necessary to template stats-retrieving queries.
+ */
 public class FeatureStatisticsQueryInfo {
   private final String name;
   private final String type;

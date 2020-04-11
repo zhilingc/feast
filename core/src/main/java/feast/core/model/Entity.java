@@ -23,6 +23,9 @@ import javax.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Feast entity object. Contains name, type as well as domain metadata about the entity.
+ */
 @Getter
 @Setter
 @javax.persistence.Entity

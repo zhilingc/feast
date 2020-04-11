@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package feast.storage.connectors.bigquery.stats;
+package feast.storage.connectors.bigquery.statistics;
 
-import static feast.storage.connectors.bigquery.stats.StatsUtil.toFeatureNameStatistics;
+import static feast.storage.connectors.bigquery.statistics.StatsUtil.toFeatureNameStatistics;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 

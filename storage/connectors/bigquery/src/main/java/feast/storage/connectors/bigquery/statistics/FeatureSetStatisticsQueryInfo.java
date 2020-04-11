@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package feast.storage.connectors.bigquery.stats;
+package feast.storage.connectors.bigquery.statistics;
 
 import com.google.protobuf.Timestamp;
 import feast.core.FeatureSetProto.FeatureSpec;
@@ -25,6 +25,10 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
+/**
+ * Value class for Feature Sets containing information necessary to template stats-retrieving
+ * queries.
+ */
 public class FeatureSetStatisticsQueryInfo {
   private final String project;
   private final String name;

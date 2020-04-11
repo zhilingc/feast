@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package feast.storage.connectors.bigquery.stats;
+package feast.storage.connectors.bigquery.statistics;
 
 import com.google.cloud.bigquery.FieldList;
 import com.google.cloud.bigquery.FieldValue;
@@ -54,6 +54,22 @@ public class StatsUtil {
     TFDV_TYPE_MAP.put(Enum.DOUBLE_LIST, Type.STRUCT);
   }
 
+  /**
+   * Convert BQ-retrieved statistics to the corresponding TFDV {@link FeatureNameStatistics}
+   * specific to the feature type.
+   *
+   * @param featureSpec {@link FeatureSpec} of the feature
+   * @param basicStatsSchema BigQuery {@link Schema} of the retrieved statistics row for the
+   *     non-histogram statistics. Used to retrieve the column names corresponding to each value in
+   *     the row.
+   * @param basicStatsValues BigQuery {@link FieldValueList} containing a single row of
+   *     non-histogram statistics retrieved from BigQuery
+   * @param histSchema BigQuery {@link Schema} of the retrieved statistics row for the histogram
+   *     statistics. Used to retrieve the column names corresponding to each value in the row.
+   * @param histValues BigQuery {@link FieldValueList} containing a single row of histogram
+   *     statistics retrieved from BigQuery
+   * @return {@link FeatureNameStatistics}
+   */
   public static FeatureNameStatistics toFeatureNameStatistics(
       FeatureSpec featureSpec,
       Schema basicStatsSchema,

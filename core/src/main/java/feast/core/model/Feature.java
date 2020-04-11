@@ -25,6 +25,9 @@ import javax.persistence.Entity;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Feature belonging to a featureset. Contains name, type as well as domain metadata about the feature.
+ */
 @Getter
 @Setter
 @Entity
