@@ -25,16 +25,17 @@ import com.google.protobuf.Timestamp;
 import feast.core.CoreServiceProto.GetFeatureSetRequest;
 import feast.core.CoreServiceProto.GetFeatureStatisticsRequest;
 import feast.core.CoreServiceProto.GetFeatureStatisticsResponse;
+import feast.core.FeatureSetProto.EntitySpec;
 import feast.core.FeatureSetProto.FeatureSet;
 import feast.core.FeatureSetProto.FeatureSetSpec;
 import feast.core.FeatureSetProto.FeatureSpec;
 import feast.core.StoreProto.Store;
 import feast.core.StoreProto.Store.StoreType;
+import feast.core.dao.EntityStatisticsRepository;
 import feast.core.dao.FeatureStatisticsRepository;
 import feast.core.dao.StoreRepository;
+import feast.core.model.*;
 import feast.core.model.Feature;
-import feast.core.model.FeatureStatistics;
-import feast.core.model.FieldId;
 import feast.storage.api.statistics.FeatureSetStatistics;
 import feast.storage.api.statistics.StatisticsRetriever;
 import feast.storage.connectors.bigquery.statistics.BigQueryStatisticsRetriever;
@@ -57,14 +58,17 @@ public class StatsService {
   private StoreRepository storeRepository;
   private SpecService specService;
   private FeatureStatisticsRepository featureStatisticsRepository;
+  private EntityStatisticsRepository entityStatisticsRepository;
 
   @Autowired
   public StatsService(
       StoreRepository storeRepository,
       SpecService specService,
+      EntityStatisticsRepository entityStatisticsRepository,
       FeatureStatisticsRepository featureStatisticsRepository) {
     this.storeRepository = storeRepository;
     this.specService = specService;
+    this.entityStatisticsRepository = entityStatisticsRepository;
     this.featureStatisticsRepository = featureStatisticsRepository;
   }
 
@@ -100,6 +104,10 @@ public class StatsService {
               .map(FeatureSpec::getName)
               .collect(Collectors.toList());
     }
+    List<String> entities =
+        featureSetSpec.getEntitiesList().stream()
+            .map(EntitySpec::getName)
+            .collect(Collectors.toList());
     List<List<FeatureNameStatistics>> featureNameStatisticsList = new ArrayList<>();
     if (request.getDatasetIdsCount() == 0) {
       // retrieve by date
@@ -109,6 +117,7 @@ public class StatsService {
             getFeatureNameStatisticsByDate(
                 statisticsRetriever,
                 featureSetSpec,
+                entities,
                 features,
                 timestamp,
                 request.getForceRefresh());
@@ -122,6 +131,7 @@ public class StatsService {
             getFeatureNameStatisticsByDataset(
                 statisticsRetriever,
                 featureSetSpec,
+                entities,
                 features,
                 datasetId,
                 request.getForceRefresh());
@@ -143,12 +153,14 @@ public class StatsService {
   private List<FeatureNameStatistics> getFeatureNameStatisticsByDataset(
       StatisticsRetriever statisticsRetriever,
       FeatureSetSpec featureSetSpec,
+      List<String> entities,
       List<String> features,
       String datasetId,
       boolean forceRefresh)
       throws IOException {
     List<FeatureNameStatistics> featureNameStatistics = new ArrayList<>();
     List<String> featuresMissingStats = new ArrayList<>();
+    List<String> entitiesMissingStats = new ArrayList<>();
     for (String featureName : features) {
       Feature feature =
           new Feature(
@@ -169,19 +181,50 @@ public class StatsService {
         featuresMissingStats.add(featureName);
       }
     }
-    if (featuresMissingStats.size() > 0) {
-      FeatureSetStatistics featureStatistics =
-          statisticsRetriever.getFeatureStatistics(featureSetSpec, featuresMissingStats, datasetId);
-      for (FeatureNameStatistics stat : featureStatistics.getFeatureNameStatistics()) {
-        featureStatisticsRepository.save(
-            FeatureStatistics.fromProto(
-                featureSetSpec.getProject(),
-                featureSetSpec.getName(),
-                featureSetSpec.getVersion(),
-                stat,
-                datasetId));
+    for (String entityName : entities) {
+      Entity entity =
+          new Entity(
+              new FieldId(
+                  featureSetSpec.getProject(),
+                  featureSetSpec.getName(),
+                  featureSetSpec.getVersion(),
+                  entityName));
+      Optional<EntityStatistics> cachedEntityStatistics = Optional.empty();
+      if (!forceRefresh) {
+        cachedEntityStatistics =
+            entityStatisticsRepository.findEntityStatisticsByEntityAndDatasetId(entity, datasetId);
       }
-      featureNameStatistics.addAll(featureStatistics.getFeatureNameStatistics());
+      if (cachedEntityStatistics.isPresent()) {
+        featureNameStatistics.add(cachedEntityStatistics.get().toProto());
+      } else {
+        entitiesMissingStats.add(entityName);
+      }
+    }
+    if (featuresMissingStats.size() > 0 || entitiesMissingStats.size() > 0) {
+      FeatureSetStatistics featureSetStatistics =
+          statisticsRetriever.getFeatureStatistics(
+              featureSetSpec, entitiesMissingStats, featuresMissingStats, datasetId);
+      for (FeatureNameStatistics stat : featureSetStatistics.getFeatureNameStatistics()) {
+        String name = stat.getPath().getStep(0);
+        if (features.contains(name)) {
+          featureStatisticsRepository.save(
+              FeatureStatistics.fromProto(
+                  featureSetSpec.getProject(),
+                  featureSetSpec.getName(),
+                  featureSetSpec.getVersion(),
+                  stat,
+                  datasetId));
+        } else if (entities.contains(name)) {
+          entityStatisticsRepository.save(
+              EntityStatistics.fromProto(
+                  featureSetSpec.getProject(),
+                  featureSetSpec.getName(),
+                  featureSetSpec.getVersion(),
+                  stat,
+                  datasetId));
+        }
+      }
+      featureNameStatistics.addAll(featureSetStatistics.getFeatureNameStatistics());
     }
     return featureNameStatistics;
   }
@@ -189,6 +232,7 @@ public class StatsService {
   private List<FeatureNameStatistics> getFeatureNameStatisticsByDate(
       StatisticsRetriever statisticsRetriever,
       FeatureSetSpec featureSetSpec,
+      List<String> entities,
       List<String> features,
       long timestamp,
       boolean forceRefresh)
@@ -196,6 +240,7 @@ public class StatsService {
     Date date = Date.from(Instant.ofEpochSecond(timestamp));
     List<FeatureNameStatistics> featureNameStatistics = new ArrayList<>();
     List<String> featuresMissingStats = new ArrayList<>();
+    List<String> entitiesMissingStats = new ArrayList<>();
     for (String featureName : features) {
       Feature feature =
           new Feature(
@@ -215,22 +260,53 @@ public class StatsService {
         featuresMissingStats.add(featureName);
       }
     }
+    for (String entityName : entities) {
+      Entity entity =
+          new Entity(
+              new FieldId(
+                  featureSetSpec.getProject(),
+                  featureSetSpec.getName(),
+                  featureSetSpec.getVersion(),
+                  entityName));
+      Optional<EntityStatistics> cachedEntityStatistics = Optional.empty();
+      if (!forceRefresh) {
+        cachedEntityStatistics =
+            entityStatisticsRepository.findEntityStatisticsByEntityAndDate(entity, date);
+      }
+      if (cachedEntityStatistics.isPresent()) {
+        featureNameStatistics.add(cachedEntityStatistics.get().toProto());
+      } else {
+        entitiesMissingStats.add(entityName);
+      }
+    }
     if (featuresMissingStats.size() > 0) {
-      FeatureSetStatistics featureStatistics =
+      FeatureSetStatistics featureSetStatistics =
           statisticsRetriever.getFeatureStatistics(
               featureSetSpec,
               featuresMissingStats,
+              entitiesMissingStats,
               Timestamp.newBuilder().setSeconds(timestamp).build());
-      for (FeatureNameStatistics stat : featureStatistics.getFeatureNameStatistics()) {
-        featureStatisticsRepository.save(
-            FeatureStatistics.fromProto(
-                featureSetSpec.getProject(),
-                featureSetSpec.getName(),
-                featureSetSpec.getVersion(),
-                stat,
-                date));
+      for (FeatureNameStatistics stat : featureSetStatistics.getFeatureNameStatistics()) {
+        String name = stat.getPath().getStep(0);
+        if (features.contains(name)) {
+          featureStatisticsRepository.save(
+              FeatureStatistics.fromProto(
+                  featureSetSpec.getProject(),
+                  featureSetSpec.getName(),
+                  featureSetSpec.getVersion(),
+                  stat,
+                  date));
+        } else if (entities.contains(name)) {
+          entityStatisticsRepository.save(
+              EntityStatistics.fromProto(
+                  featureSetSpec.getProject(),
+                  featureSetSpec.getName(),
+                  featureSetSpec.getVersion(),
+                  stat,
+                  date));
+        }
       }
-      featureNameStatistics.addAll(featureStatistics.getFeatureNameStatistics());
+      featureNameStatistics.addAll(featureSetStatistics.getFeatureNameStatistics());
     }
     return featureNameStatistics;
   }

@@ -16,22 +16,23 @@
  */
 package feast.storage.connectors.bigquery.statistics;
 
+import feast.core.FeatureSetProto.EntitySpec;
 import feast.core.FeatureSetProto.FeatureSpec;
 import feast.types.ValueProto.ValueType.Enum;
 
 /**
  * Value class for Features containing information necessary to template stats-retrieving queries.
  */
-public class FeatureStatisticsQueryInfo {
+public class FieldStatisticsQueryInfo {
   private final String name;
   private final String type;
 
-  private FeatureStatisticsQueryInfo(String name, String type) {
+  private FieldStatisticsQueryInfo(String name, String type) {
     this.name = name;
     this.type = type;
   }
 
-  public static FeatureStatisticsQueryInfo fromProto(FeatureSpec featureSpec) {
+  public static FieldStatisticsQueryInfo fromProto(FeatureSpec featureSpec) {
     Enum valueType = featureSpec.getValueType();
     switch (valueType) {
       case FLOAT:
@@ -39,11 +40,11 @@ public class FeatureStatisticsQueryInfo {
       case INT32:
       case INT64:
       case BOOL:
-        return new FeatureStatisticsQueryInfo(featureSpec.getName(), "NUMERIC");
+        return new FieldStatisticsQueryInfo(featureSpec.getName(), "NUMERIC");
       case STRING:
-        return new FeatureStatisticsQueryInfo(featureSpec.getName(), "CATEGORICAL");
+        return new FieldStatisticsQueryInfo(featureSpec.getName(), "CATEGORICAL");
       case BYTES:
-        return new FeatureStatisticsQueryInfo(featureSpec.getName(), "BYTES");
+        return new FieldStatisticsQueryInfo(featureSpec.getName(), "BYTES");
       case BYTES_LIST:
       case BOOL_LIST:
       case FLOAT_LIST:
@@ -51,9 +52,35 @@ public class FeatureStatisticsQueryInfo {
       case INT64_LIST:
       case DOUBLE_LIST:
       case STRING_LIST:
-        return new FeatureStatisticsQueryInfo(featureSpec.getName(), "LIST");
+        return new FieldStatisticsQueryInfo(featureSpec.getName(), "LIST");
       default:
         throw new IllegalArgumentException("Invalid feature type provided");
+    }
+  }
+
+  public static FieldStatisticsQueryInfo fromProto(EntitySpec entitySpec) {
+    Enum valueType = entitySpec.getValueType();
+    switch (valueType) {
+      case FLOAT:
+      case DOUBLE:
+      case INT32:
+      case INT64:
+      case BOOL:
+        return new FieldStatisticsQueryInfo(entitySpec.getName(), "NUMERIC");
+      case STRING:
+        return new FieldStatisticsQueryInfo(entitySpec.getName(), "CATEGORICAL");
+      case BYTES:
+        return new FieldStatisticsQueryInfo(entitySpec.getName(), "BYTES");
+      case BYTES_LIST:
+      case BOOL_LIST:
+      case FLOAT_LIST:
+      case INT32_LIST:
+      case INT64_LIST:
+      case DOUBLE_LIST:
+      case STRING_LIST:
+        return new FieldStatisticsQueryInfo(entitySpec.getName(), "LIST");
+      default:
+        throw new IllegalArgumentException("Invalid entity type provided");
     }
   }
 

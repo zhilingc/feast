@@ -17,6 +17,7 @@
 package feast.storage.connectors.bigquery.statistics;
 
 import com.google.protobuf.Timestamp;
+import feast.core.FeatureSetProto.EntitySpec;
 import feast.core.FeatureSetProto.FeatureSpec;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +36,7 @@ public class FeatureSetStatisticsQueryInfo {
   private final int version;
   private String datasetId = "";
   private String date = "";
-  private final List<FeatureStatisticsQueryInfo> features;
+  private final List<FieldStatisticsQueryInfo> features;
 
   public FeatureSetStatisticsQueryInfo(
       String project,
@@ -43,7 +44,7 @@ public class FeatureSetStatisticsQueryInfo {
       int version,
       String datasetId,
       String date,
-      List<FeatureStatisticsQueryInfo> features) {
+      List<FieldStatisticsQueryInfo> features) {
     this.project = project;
     this.name = name;
     this.version = version;
@@ -71,7 +72,11 @@ public class FeatureSetStatisticsQueryInfo {
   }
 
   public void addFeature(FeatureSpec featureSpec) {
-    this.features.add(FeatureStatisticsQueryInfo.fromProto(featureSpec));
+    this.features.add(FieldStatisticsQueryInfo.fromProto(featureSpec));
+  }
+
+  public void addEntity(EntitySpec entitySpec) {
+    this.features.add(FieldStatisticsQueryInfo.fromProto(entitySpec));
   }
 
   public String getProject() {
@@ -90,7 +95,7 @@ public class FeatureSetStatisticsQueryInfo {
     return datasetId;
   }
 
-  public List<FeatureStatisticsQueryInfo> getFeatures() {
+  public List<FieldStatisticsQueryInfo> getFeatures() {
     return features;
   }
 }

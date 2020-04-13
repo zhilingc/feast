@@ -20,7 +20,8 @@ import com.google.cloud.bigquery.FieldList;
 import com.google.cloud.bigquery.FieldValue;
 import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.Schema;
-import feast.core.FeatureSetProto.FeatureSpec;
+import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.Ordering;
 import feast.types.ValueProto.ValueType;
 import feast.types.ValueProto.ValueType.Enum;
 import java.util.HashMap;
@@ -58,7 +59,7 @@ public class StatsUtil {
    * Convert BQ-retrieved statistics to the corresponding TFDV {@link FeatureNameStatistics}
    * specific to the feature type.
    *
-   * @param featureSpec {@link FeatureSpec} of the feature
+   * @param valueType {@link ValueType.Enum} denoting the value type of the feature
    * @param basicStatsSchema BigQuery {@link Schema} of the retrieved statistics row for the
    *     non-histogram statistics. Used to retrieve the column names corresponding to each value in
    *     the row.
@@ -71,7 +72,7 @@ public class StatsUtil {
    * @return {@link FeatureNameStatistics}
    */
   public static FeatureNameStatistics toFeatureNameStatistics(
-      FeatureSpec featureSpec,
+      ValueType.Enum valueType,
       Schema basicStatsSchema,
       FieldValueList basicStatsValues,
       Schema histSchema,
@@ -91,9 +92,9 @@ public class StatsUtil {
     Builder featureNameStatisticsBuilder =
         FeatureNameStatistics.newBuilder()
             .setPath(Path.newBuilder().addStep(valuesMap.get("feature_name").getStringValue()))
-            .setType(TFDV_TYPE_MAP.get(featureSpec.getValueType()));
+            .setType(TFDV_TYPE_MAP.get(valueType));
 
-    switch (featureSpec.getValueType()) {
+    switch (valueType) {
       case FLOAT:
       case BOOL:
       case DOUBLE:
@@ -128,6 +129,10 @@ public class StatsUtil {
   }
 
   private static BytesStatistics getBytesStatistics(Map<String, FieldValue> valuesMap) {
+    if (valuesMap.get("total_count").getLongValue() == 0) {
+      return BytesStatistics.getDefaultInstance();
+    }
+
     return BytesStatistics.newBuilder()
         .setCommonStats(
             CommonStatistics.newBuilder()
@@ -145,17 +150,9 @@ public class StatsUtil {
   }
 
   private static StringStatistics getStringStatistics(Map<String, FieldValue> valuesMap) {
-    List<FreqAndValue> topCount =
-        valuesMap.get("top_count").getRepeatedValue().stream()
-            .map(
-                tc -> {
-                  FieldValueList recordValue = tc.getRecordValue();
-                  return FreqAndValue.newBuilder()
-                      .setValue(recordValue.get(0).getStringValue())
-                      .setFrequency(recordValue.get(1).getLongValue())
-                      .build();
-                })
-            .collect(Collectors.toList());
+    if (valuesMap.get("total_count").getLongValue() == 0) {
+      return StringStatistics.getDefaultInstance();
+    }
 
     RankHistogram.Builder rankHistogram = RankHistogram.newBuilder();
     valuesMap
@@ -169,6 +166,23 @@ public class StatsUtil {
                       .setLabel(recordValue.get(0).getStringValue())
                       .setSampleCount(recordValue.get(1).getLongValue()));
             });
+
+    List<FreqAndValue> topCount =
+        rankHistogram.getBucketsList().stream()
+            .sorted(
+                (a, b) ->
+                    ComparisonChain.start()
+                        .compare(
+                            a.getSampleCount(), b.getSampleCount(), Ordering.natural().reverse())
+                        .result())
+            .limit(5)
+            .map(
+                bucket ->
+                    FreqAndValue.newBuilder()
+                        .setValue(bucket.getLabel())
+                        .setFrequency(bucket.getSampleCount())
+                        .build())
+            .collect(Collectors.toList());
 
     return StringStatistics.newBuilder()
         .setUnique(valuesMap.get("unique").getLongValue())
@@ -186,6 +200,10 @@ public class StatsUtil {
   }
 
   private static NumericStatistics getNumericStatistics(Map<String, FieldValue> valuesMap) {
+    if (valuesMap.get("total_count").getLongValue() == 0) {
+      return NumericStatistics.getDefaultInstance();
+    }
+
     // Build quantiles
     long quantileCount = valuesMap.get("feature_count").getLongValue() / 10;
     Histogram.Builder quantilesBuilder = Histogram.newBuilder().setType(HistogramType.QUANTILES);
@@ -236,6 +254,10 @@ public class StatsUtil {
   }
 
   private static StructStatistics getStructStatistics(Map<String, FieldValue> valuesMap) {
+    if (valuesMap.get("total_count").getLongValue() == 0) {
+      return StructStatistics.getDefaultInstance();
+    }
+
     return StructStatistics.newBuilder()
         .setCommonStats(
             CommonStatistics.newBuilder()
