@@ -16,8 +16,6 @@
  */
 package feast.storage.connectors.bigquery.statistics;
 
-import static feast.storage.connectors.bigquery.statistics.StatsUtil.toFeatureNameStatistics;
-
 import com.google.auto.value.AutoValue;
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.FieldValueList;
@@ -140,22 +138,20 @@ public abstract class BigQueryStatisticsRetriever implements StatisticsRetriever
       // Convert BQ rows to FeatureNameStatistics
       for (FeatureSpec featureSpec : featureSetSpec.getFeaturesList()) {
         FeatureNameStatistics featureNameStatistics =
-            toFeatureNameStatistics(
-                featureSpec.getValueType(),
-                basicStats.getSchema(),
-                basicStatsValues.get(featureSpec.getName()),
-                hist.getSchema(),
-                histValues.get(featureSpec.getName()));
+            StatsQueryResult.create()
+                .withBasicStatsResults(
+                    basicStats.getSchema(), basicStatsValues.get(featureSpec.getName()))
+                .withHistResults(hist.getSchema(), histValues.get(featureSpec.getName()))
+                .toFeatureNameStatistics(featureSpec.getValueType());
         featureSetStatisticsBuilder.addFeatureNameStatistics(featureNameStatistics);
       }
       for (EntitySpec entitySpec : featureSetSpec.getEntitiesList()) {
         FeatureNameStatistics featureNameStatistics =
-            toFeatureNameStatistics(
-                entitySpec.getValueType(),
-                basicStats.getSchema(),
-                basicStatsValues.get(entitySpec.getName()),
-                hist.getSchema(),
-                histValues.get(entitySpec.getName()));
+            StatsQueryResult.create()
+                .withBasicStatsResults(
+                    basicStats.getSchema(), basicStatsValues.get(entitySpec.getName()))
+                .withHistResults(hist.getSchema(), histValues.get(entitySpec.getName()))
+                .toFeatureNameStatistics(entitySpec.getValueType());
         featureSetStatisticsBuilder.addFeatureNameStatistics(featureNameStatistics);
       }
       return featureSetStatisticsBuilder.build();
