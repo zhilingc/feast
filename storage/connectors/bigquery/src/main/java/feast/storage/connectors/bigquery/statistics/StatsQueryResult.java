@@ -188,7 +188,7 @@ public abstract class StatsQueryResult {
                 .setMinNumValues(1)
                 .setMaxNumValues(1)
                 .setAvgNumValues(1)
-                .setTotNumValues(valuesMap.get("total_count").getLongValue()))
+                .setTotNumValues(valuesMap.get("feature_count").getLongValue()))
         .setUnique(valuesMap.get("unique").getLongValue())
         .setMaxNumBytes((float) valuesMap.get("max").getDoubleValue())
         .setMinNumBytes((float) valuesMap.get("min").getDoubleValue())
@@ -240,7 +240,7 @@ public abstract class StatsQueryResult {
                 .setMinNumValues(1)
                 .setMaxNumValues(1)
                 .setAvgNumValues(1)
-                .setTotNumValues(valuesMap.get("total_count").getLongValue()))
+                .setTotNumValues(valuesMap.get("feature_count").getLongValue()))
         .setRankHistogram(rankHistogram)
         .addAllTopValues(topCount)
         .build();
@@ -313,7 +313,7 @@ public abstract class StatsQueryResult {
                 .setMinNumValues(valuesMap.get("min").getLongValue())
                 .setMaxNumValues(valuesMap.get("max").getLongValue())
                 .setAvgNumValues(valuesMap.get("mean").getLongValue())
-                .setTotNumValues(valuesMap.get("total_count").getLongValue()))
+                .setTotNumValues(valuesMap.get("feature_count").getLongValue() * valuesMap.get("mean").getLongValue()))
         .build();
   }
 }

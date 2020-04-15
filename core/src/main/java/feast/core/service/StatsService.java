@@ -410,7 +410,7 @@ public class StatsService {
         StructStatistics.newBuilder()
             .setCommonStats(
                 CommonStatistics.newBuilder()
-                    .setTotNumValues(totalCount)
+                    .setTotNumValues(totalNumValues)
                     .setNumNonMissing(totalCount)
                     .setAvgNumValues((float) totalNumValues / totalCount)
                     .setMaxNumValues(maxNumValues)
