@@ -34,6 +34,7 @@ import feast.core.StoreProto.Store.StoreType;
 import feast.core.dao.EntityStatisticsRepository;
 import feast.core.dao.FeatureStatisticsRepository;
 import feast.core.dao.StoreRepository;
+import feast.core.exception.RetrievalException;
 import feast.core.model.*;
 import feast.core.model.Feature;
 import feast.storage.api.statistics.FeatureSetStatistics;
@@ -96,7 +97,13 @@ public class StatsService {
   public GetFeatureStatisticsResponse getFeatureStatistics(GetFeatureStatisticsRequest request)
       throws IOException {
     StatisticsRetriever statisticsRetriever = getStatisticsRetriever(request.getStore());
-    FeatureSetSpec featureSetSpec = getFeatureSetSpec(request.getFeatureSetId());
+    FeatureSetSpec featureSetSpec;
+    try {
+      featureSetSpec = getFeatureSetSpec(request.getFeatureSetId());
+    } catch (IllegalArgumentException | RetrievalException e) {
+      throw new RetrievalException(
+          String.format("Unable to find feature set %s", request.getFeatureSetId()), e);
+    }
     List<String> features = request.getFeatureIdsList();
     if (features.size() == 0) {
       features =
@@ -162,13 +169,13 @@ public class StatsService {
     List<String> featuresMissingStats = new ArrayList<>();
     List<String> entitiesMissingStats = new ArrayList<>();
     for (String featureName : features) {
-      Feature feature =
-          new Feature(
-              new FieldId(
-                  featureSetSpec.getProject(),
-                  featureSetSpec.getName(),
-                  featureSetSpec.getVersion(),
-                  featureName));
+      FieldId fieldId =
+          new FieldId(
+              featureSetSpec.getProject(),
+              featureSetSpec.getName(),
+              featureSetSpec.getVersion(),
+              featureName);
+      Feature feature = Feature.withId(fieldId);
       Optional<FeatureStatistics> cachedFeatureStatistics = Optional.empty();
       if (!forceRefresh) {
         cachedFeatureStatistics =
@@ -182,13 +189,13 @@ public class StatsService {
       }
     }
     for (String entityName : entities) {
-      Entity entity =
-          new Entity(
-              new FieldId(
-                  featureSetSpec.getProject(),
-                  featureSetSpec.getName(),
-                  featureSetSpec.getVersion(),
-                  entityName));
+      FieldId fieldId =
+          new FieldId(
+              featureSetSpec.getProject(),
+              featureSetSpec.getName(),
+              featureSetSpec.getVersion(),
+              entityName);
+      Entity entity = Entity.withId(fieldId);
       Optional<EntityStatistics> cachedEntityStatistics = Optional.empty();
       if (!forceRefresh) {
         cachedEntityStatistics =
@@ -242,13 +249,13 @@ public class StatsService {
     List<String> featuresMissingStats = new ArrayList<>();
     List<String> entitiesMissingStats = new ArrayList<>();
     for (String featureName : features) {
-      Feature feature =
-          new Feature(
-              new FieldId(
-                  featureSetSpec.getProject(),
-                  featureSetSpec.getName(),
-                  featureSetSpec.getVersion(),
-                  featureName));
+      FieldId fieldId =
+          new FieldId(
+              featureSetSpec.getProject(),
+              featureSetSpec.getName(),
+              featureSetSpec.getVersion(),
+              featureName);
+      Feature feature = Feature.withId(fieldId);
       Optional<FeatureStatistics> cachedFeatureStatistics = Optional.empty();
       if (!forceRefresh) {
         cachedFeatureStatistics =
@@ -261,13 +268,13 @@ public class StatsService {
       }
     }
     for (String entityName : entities) {
-      Entity entity =
-          new Entity(
-              new FieldId(
-                  featureSetSpec.getProject(),
-                  featureSetSpec.getName(),
-                  featureSetSpec.getVersion(),
-                  entityName));
+      FieldId fieldId =
+          new FieldId(
+              featureSetSpec.getProject(),
+              featureSetSpec.getName(),
+              featureSetSpec.getVersion(),
+              entityName);
+      Entity entity = Entity.withId(fieldId);
       Optional<EntityStatistics> cachedEntityStatistics = Optional.empty();
       if (!forceRefresh) {
         cachedEntityStatistics =
@@ -315,7 +322,8 @@ public class StatsService {
       throws InvalidProtocolBufferException {
     Store store = storeRepository.getOne(storeName).toProto();
     if (store.getType() != StoreType.BIGQUERY) {
-      throw new IllegalArgumentException("Batch statistics are only supported for BigQuery stores");
+      throw new IllegalArgumentException(
+          "Invalid store specified. Batch statistics are only supported for BigQuery stores");
     }
     return BigQueryStatisticsRetriever.newBuilder()
         .setProjectId(store.getBigqueryConfig().getProjectId())
@@ -325,7 +333,7 @@ public class StatsService {
   }
 
   private FeatureSetSpec getFeatureSetSpec(String featureSetId)
-      throws InvalidProtocolBufferException {
+      throws InvalidProtocolBufferException, IllegalArgumentException, RetrievalException {
     String[] split = featureSetId.split("/");
     String project = split[0];
     split = split[1].split(":");
