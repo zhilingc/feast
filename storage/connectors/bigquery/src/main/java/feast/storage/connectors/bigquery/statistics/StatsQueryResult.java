@@ -313,7 +313,9 @@ public abstract class StatsQueryResult {
                 .setMinNumValues(valuesMap.get("min").getLongValue())
                 .setMaxNumValues(valuesMap.get("max").getLongValue())
                 .setAvgNumValues(valuesMap.get("mean").getLongValue())
-                .setTotNumValues(valuesMap.get("feature_count").getLongValue() * valuesMap.get("mean").getLongValue()))
+                .setTotNumValues(
+                    valuesMap.get("feature_count").getLongValue()
+                        * valuesMap.get("mean").getLongValue()))
         .build();
   }
 }
