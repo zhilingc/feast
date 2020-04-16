@@ -38,21 +38,6 @@ public class FeatureSetStatisticsQueryInfo {
   private String date = "";
   private final List<FieldStatisticsQueryInfo> features;
 
-  public FeatureSetStatisticsQueryInfo(
-      String project,
-      String name,
-      int version,
-      String datasetId,
-      String date,
-      List<FieldStatisticsQueryInfo> features) {
-    this.project = project;
-    this.name = name;
-    this.version = version;
-    this.datasetId = datasetId;
-    this.date = date;
-    this.features = features;
-  }
-
   public FeatureSetStatisticsQueryInfo(String project, String name, int version, String datasetId) {
     this.project = project;
     this.name = name;
@@ -93,6 +78,10 @@ public class FeatureSetStatisticsQueryInfo {
 
   public String getDatasetId() {
     return datasetId;
+  }
+
+  public String getDate() {
+    return date;
   }
 
   public List<FieldStatisticsQueryInfo> getFeatures() {
