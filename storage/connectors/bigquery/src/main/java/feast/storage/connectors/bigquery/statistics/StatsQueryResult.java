@@ -31,6 +31,8 @@ import org.tensorflow.metadata.v0.Histogram.Bucket;
 import org.tensorflow.metadata.v0.Histogram.HistogramType;
 import org.tensorflow.metadata.v0.StringStatistics.FreqAndValue;
 
+import javax.annotation.Nullable;
+
 @AutoValue
 public abstract class StatsQueryResult {
   // Map converting Feast type to TFDV type
@@ -54,12 +56,16 @@ public abstract class StatsQueryResult {
     TFDV_TYPE_MAP.put(ValueType.Enum.DOUBLE_LIST, FeatureNameStatistics.Type.STRUCT);
   }
 
+  @Nullable
   abstract Schema basicStatsSchema();
 
+  @Nullable
   abstract FieldValueList basicStatsFieldValues();
 
+  @Nullable
   abstract Schema histSchema();
 
+  @Nullable
   abstract FieldValueList histFieldValues();
 
   public static StatsQueryResult create() {
