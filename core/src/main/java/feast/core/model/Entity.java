@@ -30,14 +30,16 @@ public class Entity extends Field {
 
   public Entity() {}
 
-  public Entity(FieldId fieldId) {
-    this.setId(fieldId);
-  }
-
-  public Entity(String name, ValueType.Enum type) {
+  private Entity(String name, ValueType.Enum type) {
     this.setId(new FieldId());
     this.setName(name);
     this.setType(type.toString());
+  }
+
+  public static Entity withId(FieldId fieldId) {
+    Entity entity = new Entity();
+    entity.setId(fieldId);
+    return entity;
   }
 
   public static Entity fromProto(EntitySpec entitySpec) {

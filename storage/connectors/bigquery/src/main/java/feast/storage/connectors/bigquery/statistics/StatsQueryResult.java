@@ -26,12 +26,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import org.tensorflow.metadata.v0.*;
 import org.tensorflow.metadata.v0.Histogram.Bucket;
 import org.tensorflow.metadata.v0.Histogram.HistogramType;
 import org.tensorflow.metadata.v0.StringStatistics.FreqAndValue;
-
-import javax.annotation.Nullable;
 
 @AutoValue
 public abstract class StatsQueryResult {

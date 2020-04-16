@@ -930,7 +930,6 @@ class Client:
         return self._core_service_stub.GetFeatureStatistics(
             request
         ).dataset_feature_statistics_list
-        return None
 
 
 def _build_feature_references(

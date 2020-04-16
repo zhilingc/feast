@@ -36,14 +36,16 @@ public class Feature extends Field {
 
   public Feature() {}
 
-  public Feature(FieldId fieldId) {
-    this.setId(fieldId);
-  }
-
-  public Feature(String name, ValueType.Enum type) {
+  private Feature(String name, ValueType.Enum type) {
     this.setId(new FieldId());
     this.setName(name);
     this.setType(type.toString());
+  }
+
+  public static Feature withId(FieldId fieldId) {
+    Feature feature = new Feature();
+    feature.setId(fieldId);
+    return feature;
   }
 
   public static Feature fromProto(FeatureSpec featureSpec) {
