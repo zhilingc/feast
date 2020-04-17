@@ -54,7 +54,8 @@ public class FieldStatisticsQueryInfo {
       case STRING_LIST:
         return new FieldStatisticsQueryInfo(featureSpec.getName(), "LIST");
       default:
-        throw new IllegalArgumentException("Invalid feature type provided");
+        throw new IllegalArgumentException(
+            String.format("Invalid feature type provided: %s", valueType));
     }
   }
 
@@ -80,7 +81,8 @@ public class FieldStatisticsQueryInfo {
       case STRING_LIST:
         return new FieldStatisticsQueryInfo(entitySpec.getName(), "LIST");
       default:
-        throw new IllegalArgumentException("Invalid entity type provided");
+        throw new IllegalArgumentException(
+            String.format("Invalid entity type provided: %s", valueType));
     }
   }
 
