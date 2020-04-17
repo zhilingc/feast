@@ -55,15 +55,19 @@ public abstract class StatsQueryResult {
     TFDV_TYPE_MAP.put(ValueType.Enum.DOUBLE_LIST, FeatureNameStatistics.Type.STRUCT);
   }
 
+  // Schema of the table returned by the basic stats retrieval query
   @Nullable
   abstract Schema basicStatsSchema();
 
+  // Table values returned by the basic stats retrieval query
   @Nullable
   abstract FieldValueList basicStatsFieldValues();
 
+  // Schema of the table returned by the histogram retrieval query
   @Nullable
   abstract Schema histSchema();
 
+  // Table values returned by the histogram retrieval query
   @Nullable
   abstract FieldValueList histFieldValues();
 
@@ -131,6 +135,7 @@ public abstract class StatsQueryResult {
   public FeatureNameStatistics toFeatureNameStatistics(ValueType.Enum valueType) {
     Map<String, FieldValue> valuesMap = new HashMap<>();
 
+    // Convert the table values to a map of field name : table value for easy retrieval
     FieldList basicStatsfields = basicStatsSchema().getFields();
     for (int i = 0; i < basicStatsSchema().getFields().size(); i++) {
       valuesMap.put(basicStatsfields.get(i).getName(), basicStatsFieldValues().get(i));
@@ -143,7 +148,7 @@ public abstract class StatsQueryResult {
 
     FeatureNameStatistics.Builder featureNameStatisticsBuilder =
         FeatureNameStatistics.newBuilder()
-            .setPath(Path.newBuilder().addStep(valuesMap.get("feature_name").getStringValue()))
+            .setPath(Path.newBuilder().addStep(valuesMap.get("field_name").getStringValue()))
             .setType(TFDV_TYPE_MAP.get(valueType));
 
     switch (valueType) {

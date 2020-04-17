@@ -24,7 +24,10 @@ import feast.types.ValueProto.ValueType.Enum;
  * Value class for Features containing information necessary to template stats-retrieving queries.
  */
 public class FieldStatisticsQueryInfo {
+  // Name of the field
   private final String name;
+
+  // Type of the field
   private final String type;
 
   private FieldStatisticsQueryInfo(String name, String type) {

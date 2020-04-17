@@ -12,32 +12,32 @@ WITH subset AS (
         GROUP BY dataset_id, event_timestamp, {{ featureSet.entityNames | join(', ')}}
     )
 )
-{% for feature in featureSet.features %}
+{% for field in featureSet.fields %}
 SELECT
-    "{{ feature.name }}" as feature_name,
+    "{{ field.name }}" as field_name,
     -- total count
     COUNT(*) AS total_count,
     -- count
-    COUNT({{ feature.name }}) as feature_count,
+    COUNT({{ field.name }}) as feature_count,
     -- missing
-    COUNT(*) - COUNT({{ feature.name }}) as missing_count,
-    {% if feature.type equals "NUMERIC" %}
+    COUNT(*) - COUNT({{ field.name }}) as missing_count,
+    {% if field.type equals "NUMERIC" %}
     -- mean
-    AVG({{ feature.name }}) as mean,
+    AVG({{ field.name }}) as mean,
     -- stdev
-    STDDEV({{ feature.name }}) as stdev,
+    STDDEV({{ field.name }}) as stdev,
     -- zeroes
-    COUNTIF({{ feature.name }} = 0) as zeroes,
+    COUNTIF({{ field.name }} = 0) as zeroes,
     -- min
-    MIN({{ feature.name }}) as min,
+    MIN({{ field.name }}) as min,
     -- max
-    MAX({{ feature.name }}) as max,
+    MAX({{ field.name }}) as max,
     -- hist will have to be called separately
     -- quantiles
-    APPROX_QUANTILES(CAST({{ feature.name }} AS FLOAT64), 10) AS quantiles,
+    APPROX_QUANTILES(CAST({{ field.name }} AS FLOAT64), 10) AS quantiles,
     -- unique
     null as unique
-    {% elseif feature.type equals "CATEGORICAL" %}
+    {% elseif field.type equals "CATEGORICAL" %}
     -- mean
     null as mean,
     -- stdev
@@ -51,34 +51,34 @@ SELECT
     -- quantiles
     ARRAY<FLOAT64>[] AS quantiles,
     -- unique
-    COUNT(DISTINCT({{ feature.name }})) as unique
-    {% elseif feature.type equals "BYTES" %}
+    COUNT(DISTINCT({{ field.name }})) as unique
+    {% elseif field.type equals "BYTES" %}
     -- mean
-    AVG(BIT_COUNT({{ feature.name }})) as mean,
+    AVG(BIT_COUNT({{ field.name }})) as mean,
     -- stdev
     null as stdev,
     -- zeroes
     null as zeroes,
     -- min
-    MIN(BIT_COUNT({{ feature.name }})) as min,
+    MIN(BIT_COUNT({{ field.name }})) as min,
     -- max
-    MAX(BIT_COUNT({{ feature.name }})) as max,
+    MAX(BIT_COUNT({{ field.name }})) as max,
     -- hist will have to be called separately
     -- quantiles
     ARRAY<FLOAT64>[] AS quantiles,
     -- unique
-    COUNT(DISTINCT({{ feature.name }})) as unique
-    {% elseif feature.type equals "LIST" %}
+    COUNT(DISTINCT({{ field.name }})) as unique
+    {% elseif field.type equals "LIST" %}
     -- mean
-    AVG(ARRAY_LENGTH({{ feature.name }})) as mean,
+    AVG(ARRAY_LENGTH({{ field.name }})) as mean,
     -- stdev
     null as stdev,
     -- zeroes
     null as zeroes,
     -- min
-    MIN(ARRAY_LENGTH({{ feature.name }})) as min,
+    MIN(ARRAY_LENGTH({{ field.name }})) as min,
     -- max
-    MAX(ARRAY_LENGTH({{ feature.name }})) as max,
+    MAX(ARRAY_LENGTH({{ field.name }})) as max,
     -- hist will have to be called separately
     -- quantiles
     ARRAY<FLOAT64>[] AS quantiles,

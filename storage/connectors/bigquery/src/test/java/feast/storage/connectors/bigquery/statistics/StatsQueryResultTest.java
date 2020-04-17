@@ -35,7 +35,7 @@ import org.tensorflow.metadata.v0.FeatureNameStatistics;
 public class StatsQueryResultTest {
   private Schema basicStatsSchema =
       Schema.of(
-          com.google.cloud.bigquery.Field.of("feature_name", LegacySQLTypeName.STRING),
+          com.google.cloud.bigquery.Field.of("field_name", LegacySQLTypeName.STRING),
           com.google.cloud.bigquery.Field.of("total_count", LegacySQLTypeName.INTEGER),
           com.google.cloud.bigquery.Field.of("feature_count", LegacySQLTypeName.INTEGER),
           com.google.cloud.bigquery.Field.of("missing_count", LegacySQLTypeName.INTEGER),
@@ -49,7 +49,7 @@ public class StatsQueryResultTest {
 
   private Schema histStatsSchema =
       Schema.of(
-          com.google.cloud.bigquery.Field.of("feature", LegacySQLTypeName.STRING),
+          com.google.cloud.bigquery.Field.of("field", LegacySQLTypeName.STRING),
           com.google.cloud.bigquery.Field.of(
               "num_hist",
               LegacySQLTypeName.RECORD,

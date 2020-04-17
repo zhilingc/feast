@@ -96,7 +96,11 @@ public class StatsService {
   @Transactional
   public GetFeatureStatisticsResponse getFeatureStatistics(GetFeatureStatisticsRequest request)
       throws IOException {
+
+    // Get the stats retriever for the store requested
     StatisticsRetriever statisticsRetriever = getStatisticsRetriever(request.getStore());
+
+    // 1. Retrieve the feature set spec from the db
     FeatureSetSpec featureSetSpec;
     try {
       featureSetSpec = getFeatureSetSpec(request.getFeatureSetId());
@@ -104,6 +108,9 @@ public class StatsService {
       throw new RetrievalException(
           String.format("Unable to find feature set %s", request.getFeatureSetId()), e);
     }
+
+    // 2. Filter out the features requested by the user. If none are provided,
+    // use all features in the feature set.
     List<String> features = request.getFeatureIdsList();
     if (features.size() == 0) {
       features =
@@ -115,9 +122,11 @@ public class StatsService {
         featureSetSpec.getEntitiesList().stream()
             .map(EntitySpec::getName)
             .collect(Collectors.toList());
+
+    // 3. Retrieve the statistics from the StatsRetriever.
     List<List<FeatureNameStatistics>> featureNameStatisticsList = new ArrayList<>();
     if (request.getDatasetIdsCount() == 0) {
-      // retrieve by date
+      // If no dataset provided, retrieve by date
       long timestamp = request.getStartDate().getSeconds();
       while (timestamp < request.getEndDate().getSeconds()) {
         List<FeatureNameStatistics> featureNameStatistics =
@@ -132,7 +141,7 @@ public class StatsService {
         timestamp += 86400; // advance by a day
       }
     } else {
-      // retrieve by dataset
+      // else, retrieve by dataset
       for (String datasetId : request.getDatasetIdsList()) {
         List<FeatureNameStatistics> featureNameStatistics =
             getFeatureNameStatisticsByDataset(
@@ -145,6 +154,8 @@ public class StatsService {
         featureNameStatisticsList.add(featureNameStatistics);
       }
     }
+
+    // Merge statistics values across days/datasets
     List<FeatureNameStatistics> featureNameStatistics = mergeStatistics(featureNameStatisticsList);
     long totalCount = getTotalCount(featureNameStatistics.get(0));
     return GetFeatureStatisticsResponse.newBuilder()
@@ -157,6 +168,19 @@ public class StatsService {
         .build();
   }
 
+  /**
+   * Get {@link FeatureNameStatistics} by dataset id.
+   *
+   * @param statisticsRetriever {@link StatisticsRetriever} corresponding to the store to get the
+   *     data from.
+   * @param featureSetSpec {@link FeatureSetSpec} of the feature set requested
+   * @param entities entity names to retrieve
+   * @param features features to retrieve
+   * @param datasetId dataset id to subset the data by
+   * @param forceRefresh whether to override the values in the cache
+   * @return {@link FeatureNameStatistics} for the data within the dataset id provided
+   * @throws IOException
+   */
   private List<FeatureNameStatistics> getFeatureNameStatisticsByDataset(
       StatisticsRetriever statisticsRetriever,
       FeatureSetSpec featureSetSpec,
@@ -168,6 +192,11 @@ public class StatsService {
     List<FeatureNameStatistics> featureNameStatistics = new ArrayList<>();
     List<String> featuresMissingStats = new ArrayList<>();
     List<String> entitiesMissingStats = new ArrayList<>();
+
+    // For each feature requested, check if statistics already exist in the cache
+    // If not refreshing data in the cache, retrieve the cached data and add it to the
+    // list of FeatureNameStatistics for this dataset.
+    // Else, add to the list of features we still need to retrieve statistics for.
     for (String featureName : features) {
       FieldId fieldId =
           new FieldId(
@@ -188,6 +217,11 @@ public class StatsService {
         featuresMissingStats.add(featureName);
       }
     }
+
+    // For each entity requested, check if statistics already exist in the cache
+    // If not refreshing data in the cache, retrieve the cached data and add it to the
+    // list of FeatureNameStatistics for this dataset.
+    // Else, add to the list of entity we still need to retrieve statistics for.
     for (String entityName : entities) {
       FieldId fieldId =
           new FieldId(
@@ -207,10 +241,15 @@ public class StatsService {
         entitiesMissingStats.add(entityName);
       }
     }
+
+    // Retrieve the balance of statistics after checking the cache, and add it to the
+    // list of FeatureNameStatistics.
     if (featuresMissingStats.size() > 0 || entitiesMissingStats.size() > 0) {
       FeatureSetStatistics featureSetStatistics =
           statisticsRetriever.getFeatureStatistics(
               featureSetSpec, entitiesMissingStats, featuresMissingStats, datasetId);
+
+      // Persist the newly retrieved statistics in the cache.
       for (FeatureNameStatistics stat : featureSetStatistics.getFeatureNameStatistics()) {
         String name = stat.getPath().getStep(0);
         if (features.contains(name)) {
@@ -236,6 +275,19 @@ public class StatsService {
     return featureNameStatistics;
   }
 
+  /**
+   * Get {@link FeatureNameStatistics} by date.
+   *
+   * @param statisticsRetriever {@link StatisticsRetriever} corresponding to the store to get the
+   *     data from.
+   * @param featureSetSpec {@link FeatureSetSpec} of the feature set requested
+   * @param entities entity names to retrieve
+   * @param features features to retrieve
+   * @param timestamp timestamp of the date to subset the data
+   * @param forceRefresh whether to override the values in the cache
+   * @return {@link FeatureNameStatistics} for the data within the dataset id provided
+   * @throws IOException
+   */
   private List<FeatureNameStatistics> getFeatureNameStatisticsByDate(
       StatisticsRetriever statisticsRetriever,
       FeatureSetSpec featureSetSpec,
@@ -248,6 +300,11 @@ public class StatsService {
     List<FeatureNameStatistics> featureNameStatistics = new ArrayList<>();
     List<String> featuresMissingStats = new ArrayList<>();
     List<String> entitiesMissingStats = new ArrayList<>();
+
+    // For each feature requested, check if statistics already exist in the cache
+    // If not refreshing data in the cache, retrieve the cached data and add it to the
+    // list of FeatureNameStatistics for this date.
+    // Else, add to the list of features we still need to retrieve statistics for.
     for (String featureName : features) {
       FieldId fieldId =
           new FieldId(
@@ -267,6 +324,11 @@ public class StatsService {
         featuresMissingStats.add(featureName);
       }
     }
+
+    // For each entity requested, check if statistics already exist in the cache
+    // If not refreshing data in the cache, retrieve the cached data and add it to the
+    // list of FeatureNameStatistics for this date.
+    // Else, add to the list of entity we still need to retrieve statistics for.
     for (String entityName : entities) {
       FieldId fieldId =
           new FieldId(
@@ -286,13 +348,18 @@ public class StatsService {
         entitiesMissingStats.add(entityName);
       }
     }
-    if (featuresMissingStats.size() > 0) {
+
+    // Retrieve the balance of statistics after checking the cache, and add it to the
+    // list of FeatureNameStatistics.
+    if (featuresMissingStats.size() > 0 || entitiesMissingStats.size() > 0) {
       FeatureSetStatistics featureSetStatistics =
           statisticsRetriever.getFeatureStatistics(
               featureSetSpec,
               featuresMissingStats,
               entitiesMissingStats,
               Timestamp.newBuilder().setSeconds(timestamp).build());
+
+      // Persist the newly retrieved statistics in the cache.
       for (FeatureNameStatistics stat : featureSetStatistics.getFeatureNameStatistics()) {
         String name = stat.getPath().getStep(0);
         if (features.contains(name)) {
@@ -318,12 +385,21 @@ public class StatsService {
     return featureNameStatistics;
   }
 
+  /**
+   * Get the {@link StatisticsRetriever} corresponding to the store name provided.
+   *
+   * @param storeName name of the store to retrieve statistics from
+   * @return {@link StatisticsRetriever}
+   * @throws InvalidProtocolBufferException
+   */
   private StatisticsRetriever getStatisticsRetriever(String storeName)
       throws InvalidProtocolBufferException {
     Store store = storeRepository.getOne(storeName).toProto();
     if (store.getType() != StoreType.BIGQUERY) {
       throw new IllegalArgumentException(
-          "Invalid store specified. Batch statistics are only supported for BigQuery stores");
+          String.format(
+              "Invalid store %s specified. Batch statistics are only supported for BigQuery stores",
+              store.getType()));
     }
     return BigQueryStatisticsRetriever.newBuilder()
         .setProjectId(store.getBigqueryConfig().getProjectId())
@@ -349,6 +425,13 @@ public class StatsService {
     return featureSet.getSpec();
   }
 
+  /**
+   * Merge feature statistics by name. This method is used to merge statistics retrieved over
+   * multiple days or datasets.
+   *
+   * @param featureNameStatistics {@link FeatureNameStatistics} retrieved from the store
+   * @return Merged list of {@link FeatureNameStatistics} by name
+   */
   @VisibleForTesting
   public List<FeatureNameStatistics> mergeStatistics(
       List<List<FeatureNameStatistics>> featureNameStatistics) {

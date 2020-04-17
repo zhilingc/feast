@@ -31,20 +31,33 @@ import org.joda.time.format.DateTimeFormatter;
  * queries.
  */
 public class FeatureSetStatisticsQueryInfo {
+  // Feast project name
   private final String project;
+
+  // Feature set name
   private final String name;
+
+  // Version of the feature set
   private final int version;
+
+  // Dataset ID to retrieve statistics over
   private String datasetId = "";
+
+  // Date to retrieve statistics over
   private String date = "";
+
+  // List of entity names in this feature set
   private final List<String> entityNames;
-  private final List<FieldStatisticsQueryInfo> features;
+
+  // List of fields to get stats for
+  private final List<FieldStatisticsQueryInfo> fields;
 
   public FeatureSetStatisticsQueryInfo(String project, String name, int version, String datasetId) {
     this.project = project;
     this.name = name;
     this.version = version;
     this.entityNames = new ArrayList<>();
-    this.features = new ArrayList<>();
+    this.fields = new ArrayList<>();
     this.datasetId = datasetId;
   }
 
@@ -53,19 +66,19 @@ public class FeatureSetStatisticsQueryInfo {
     this.name = name;
     this.version = version;
     this.entityNames = new ArrayList<>();
-    this.features = new ArrayList<>();
+    this.fields = new ArrayList<>();
     DateTime dateTime = new DateTime(date.getSeconds() * 1000, DateTimeZone.UTC);
     DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyy-MM-dd");
     this.date = fmt.print(dateTime);
   }
 
   public void addFeature(FeatureSpec featureSpec) {
-    this.features.add(FieldStatisticsQueryInfo.fromProto(featureSpec));
+    this.fields.add(FieldStatisticsQueryInfo.fromProto(featureSpec));
   }
 
   public void addEntity(EntitySpec entitySpec) {
     this.entityNames.add(entitySpec.getName());
-    this.features.add(FieldStatisticsQueryInfo.fromProto(entitySpec));
+    this.fields.add(FieldStatisticsQueryInfo.fromProto(entitySpec));
   }
 
   public String getProject() {
@@ -92,7 +105,7 @@ public class FeatureSetStatisticsQueryInfo {
     return entityNames;
   }
 
-  public List<FieldStatisticsQueryInfo> getFeatures() {
-    return features;
+  public List<FieldStatisticsQueryInfo> getFields() {
+    return fields;
   }
 }
