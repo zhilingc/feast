@@ -36,12 +36,14 @@ public class FeatureSetStatisticsQueryInfo {
   private final int version;
   private String datasetId = "";
   private String date = "";
+  private final List<String> entityNames;
   private final List<FieldStatisticsQueryInfo> features;
 
   public FeatureSetStatisticsQueryInfo(String project, String name, int version, String datasetId) {
     this.project = project;
     this.name = name;
     this.version = version;
+    this.entityNames = new ArrayList<>();
     this.features = new ArrayList<>();
     this.datasetId = datasetId;
   }
@@ -50,6 +52,7 @@ public class FeatureSetStatisticsQueryInfo {
     this.project = project;
     this.name = name;
     this.version = version;
+    this.entityNames = new ArrayList<>();
     this.features = new ArrayList<>();
     DateTime dateTime = new DateTime(date.getSeconds() * 1000, DateTimeZone.UTC);
     DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyy-MM-dd");
@@ -61,6 +64,7 @@ public class FeatureSetStatisticsQueryInfo {
   }
 
   public void addEntity(EntitySpec entitySpec) {
+    this.entityNames.add(entitySpec.getName());
     this.features.add(FieldStatisticsQueryInfo.fromProto(entitySpec));
   }
 
@@ -82,6 +86,10 @@ public class FeatureSetStatisticsQueryInfo {
 
   public String getDate() {
     return date;
+  }
+
+  public List<String> getEntityNames() {
+    return entityNames;
   }
 
   public List<FieldStatisticsQueryInfo> getFeatures() {

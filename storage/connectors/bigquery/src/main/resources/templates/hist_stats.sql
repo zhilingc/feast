@@ -1,10 +1,16 @@
 WITH subset AS (
-SELECT * FROM `{{ projectId }}.{{ datasetId }}.{{ featureSet.project }}_{{ featureSet.name }}_v{{ featureSet.version }}`
-{% if featureSet.datasetId == "" %}
-WHERE event_timestamp >= '{{ featureSet.date }} 00:00:00 UTC' AND event_timestamp < DATETIME_ADD('{{ featureSet.date }}  00:00:00 UTC', INTERVAL 1 DAY)
-{% else %}
-WHERE dataset_id='{{ featureSet.datasetId }}'
-{% endif %}
+    SELECT rw.* FROM (
+        SELECT ARRAY_AGG(
+          t ORDER BY t.created_timestamp DESC LIMIT 1
+        )[OFFSET(0)]  rw
+        FROM `{{ projectId }}.{{ datasetId }}.{{ featureSet.project }}_{{ featureSet.name }}_v{{ featureSet.version }}` t
+        {% if featureSet.datasetId == "" %}
+        WHERE event_timestamp >= '{{ featureSet.date }} 00:00:00 UTC' AND event_timestamp < DATETIME_ADD('{{ featureSet.date }}  00:00:00 UTC', INTERVAL 1 DAY)
+        {% else %}
+        WHERE dataset_id='{{ featureSet.datasetId }}'
+        {% endif %}
+        GROUP BY dataset_id, event_timestamp, {{ featureSet.entityNames | join(', ')}}
+    )
 )
 {% for feature in featureSet.features %}
 , {{ feature.name }}_stats AS (

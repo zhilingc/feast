@@ -726,6 +726,7 @@ class Client:
         self,
         feature_set: Union[str, FeatureSet],
         source: Union[pd.DataFrame, str],
+        dataset_id: str = None,
         chunk_size: int = 10000,
         version: int = None,
         force_update: bool = False,
@@ -747,6 +748,10 @@ class Client:
                     * parquet
                     * csv
                     * json
+
+            dataset_id (str):
+                Id assigned to this dataset. If not provided, a unique UUID
+                will be generated instead.
 
             chunk_size (int):
                 Amount of rows to load and ingest at a time.
@@ -822,7 +827,8 @@ class Client:
             # Loop optimization declarations
             produce = producer.produce
             flush = producer.flush
-            dataset_id = _generate_dataset_id(feature_set)
+            if dataset_id is None:
+                dataset_id = _generate_dataset_id(feature_set)
 
             # Transform and push data to Kafka
             if feature_set.source.source_type == "Kafka":
