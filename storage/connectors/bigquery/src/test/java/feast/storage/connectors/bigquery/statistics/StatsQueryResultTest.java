@@ -17,7 +17,7 @@
 package feast.storage.connectors.bigquery.statistics;
 
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
 
 import com.google.cloud.bigquery.FieldValue;
 import com.google.cloud.bigquery.FieldValue.Attribute;
@@ -185,6 +185,88 @@ public class StatsQueryResultTest {
 
     String expectedJson =
         "{\"type\":\"STRING\",\"stringStats\":{\"commonStats\":{\"numNonMissing\":\"20\",\"minNumValues\":\"1\",\"maxNumValues\":\"1\",\"avgNumValues\":1,\"totNumValues\":\"20\"},\"unique\":\"2\",\"topValues\":[{\"value\":\"b\",\"frequency\":2},{\"value\":\"a\",\"frequency\":1}],\"rankHistogram\":{\"buckets\":[{\"label\":\"a\",\"sampleCount\":1},{\"label\":\"b\",\"sampleCount\":2}]}},\"path\":{\"step\":[\"strings\"]}}";
+    FeatureNameStatistics.Builder expected = FeatureNameStatistics.newBuilder();
+    JsonFormat.parser().merge(expectedJson, expected);
+    assertThat(actual, equalTo(expected.build()));
+  }
+
+  @Test
+  public void voidShouldConvertBytesStatsToFeatureNameStatistics()
+      throws InvalidProtocolBufferException {
+    FieldValueList stringFieldValueList =
+        FieldValueList.of(
+            Lists.newArrayList(
+                FieldValue.of(Attribute.PRIMITIVE, "bytes"),
+                FieldValue.of(Attribute.PRIMITIVE, "20"),
+                FieldValue.of(Attribute.PRIMITIVE, "20"),
+                FieldValue.of(Attribute.PRIMITIVE, "0"),
+                FieldValue.of(Attribute.PRIMITIVE, "5"),
+                FieldValue.of(Attribute.PRIMITIVE, null),
+                FieldValue.of(Attribute.PRIMITIVE, null),
+                FieldValue.of(Attribute.PRIMITIVE, "3"),
+                FieldValue.of(Attribute.PRIMITIVE, "7"),
+                FieldValue.of(Attribute.REPEATED, FieldValueList.of(Lists.newArrayList())),
+                FieldValue.of(Attribute.PRIMITIVE, "2")));
+
+    FieldValueList stringHistFieldValueList =
+        FieldValueList.of(
+            Lists.newArrayList(
+                FieldValue.of(Attribute.PRIMITIVE, "bytes"),
+                FieldValue.of(Attribute.REPEATED, FieldValueList.of(Lists.newArrayList())),
+                FieldValue.of(Attribute.REPEATED, FieldValueList.of(Lists.newArrayList()))));
+
+    FeatureSpec featureSpec =
+        FeatureSpec.newBuilder().setName("bytes").setValueType(ValueType.Enum.BYTES).build();
+
+    FeatureNameStatistics actual =
+        StatsQueryResult.create()
+            .withBasicStatsResults(basicStatsSchema, stringFieldValueList)
+            .withHistResults(histStatsSchema, stringHistFieldValueList)
+            .toFeatureNameStatistics(featureSpec.getValueType());
+
+    String expectedJson =
+        "{\"type\":\"BYTES\",\"bytesStats\":{\"commonStats\":{\"numNonMissing\":\"20\",\"minNumValues\":\"1\",\"maxNumValues\":\"1\",\"avgNumValues\":1,\"totNumValues\":\"20\"},\"unique\":\"2\",\"avgNumBytes\":5,\"minNumBytes\":3,\"maxNumBytes\":7},\"path\":{\"step\":[\"bytes\"]}}";
+    FeatureNameStatistics.Builder expected = FeatureNameStatistics.newBuilder();
+    JsonFormat.parser().merge(expectedJson, expected);
+    assertThat(actual, equalTo(expected.build()));
+  }
+
+  @Test
+  public void voidShouldConvertStructStatsToFeatureNameStatistics()
+      throws InvalidProtocolBufferException {
+    FieldValueList stringFieldValueList =
+        FieldValueList.of(
+            Lists.newArrayList(
+                FieldValue.of(Attribute.PRIMITIVE, "list"),
+                FieldValue.of(Attribute.PRIMITIVE, "20"),
+                FieldValue.of(Attribute.PRIMITIVE, "20"),
+                FieldValue.of(Attribute.PRIMITIVE, "0"),
+                FieldValue.of(Attribute.PRIMITIVE, "5"),
+                FieldValue.of(Attribute.PRIMITIVE, null),
+                FieldValue.of(Attribute.PRIMITIVE, null),
+                FieldValue.of(Attribute.PRIMITIVE, "3"),
+                FieldValue.of(Attribute.PRIMITIVE, "7"),
+                FieldValue.of(Attribute.REPEATED, FieldValueList.of(Lists.newArrayList())),
+                FieldValue.of(Attribute.PRIMITIVE, null)));
+
+    FieldValueList stringHistFieldValueList =
+        FieldValueList.of(
+            Lists.newArrayList(
+                FieldValue.of(Attribute.PRIMITIVE, "list"),
+                FieldValue.of(Attribute.REPEATED, FieldValueList.of(Lists.newArrayList())),
+                FieldValue.of(Attribute.REPEATED, FieldValueList.of(Lists.newArrayList()))));
+
+    FeatureSpec featureSpec =
+        FeatureSpec.newBuilder().setName("list").setValueType(ValueType.Enum.STRING_LIST).build();
+
+    FeatureNameStatistics actual =
+        StatsQueryResult.create()
+            .withBasicStatsResults(basicStatsSchema, stringFieldValueList)
+            .withHistResults(histStatsSchema, stringHistFieldValueList)
+            .toFeatureNameStatistics(featureSpec.getValueType());
+
+    String expectedJson =
+        "{\"type\":\"STRUCT\",\"structStats\":{\"commonStats\":{\"numNonMissing\":\"20\",\"minNumValues\":\"3\",\"maxNumValues\":\"7\",\"avgNumValues\":5,\"totNumValues\":\"100\"}},\"path\":{\"step\":[\"list\"]}}";
     FeatureNameStatistics.Builder expected = FeatureNameStatistics.newBuilder();
     JsonFormat.parser().merge(expectedJson, expected);
     assertThat(actual, equalTo(expected.build()));
